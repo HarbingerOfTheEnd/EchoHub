@@ -19,4 +19,9 @@ sea-orm = { version = "0.12.15", features = [
 tokio = { version = "1.38.0", features = ["full"] }
 time = { version = "0.3.36", features = ["macros"] }
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "time"] }
+tracing-subscriber = { version = "0.3.18", features = [
+    "env-filter",
+    "local-time",
+    "ansi",
+    "time",
+] }
