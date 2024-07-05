@@ -1,0 +1,22 @@
+"$schema" = "https://json.schemastore.org/cargo.json"
+
+[package]
+name = "auth-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.5"
+dotenvy = "0.15.7"
+sea-orm = { version = "0.12.15", features = [
+    "sqlx-postgres",
+    "runtime-tokio-native-tls",
+    "macros",
+    "mock",
+    "with-uuid",
+    "with-time",
+] }
+tokio = { version = "1.38.0", features = ["full"] }
+time = { version = "0.3.36", features = ["macros"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "time"] }
