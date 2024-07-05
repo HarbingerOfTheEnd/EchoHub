@@ -1,0 +1,8 @@
+[schema]
+path = "taplo://taplo.toml"
+
+[formatting]
+array_trailing_comma = true
+array_auto_collapse = true
+align_entries = false
+indent_string = "    "
