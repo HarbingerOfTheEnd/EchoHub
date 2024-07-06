@@ -1,7 +1,7 @@
 pub(crate) mod api;
 pub(crate) mod prelude;
 
-use std::{env::var, net::SocketAddr, path::Path};
+use std::{env::var, path::Path};
 
 use axum::serve;
 use dotenvy::from_path;
@@ -35,12 +35,9 @@ async fn main() {
     let db_conn = get_db_conn().await;
     info!("Connected to database");
 
-    let address = var("ADDRESS")
-        .expect("ADDRESS must be set")
-        .parse::<SocketAddr>()
-        .unwrap();
+    let address = var("ADDRESS").expect("ADDRESS must be set");
     let listener = TcpListener::bind(&address).await.unwrap();
-    info!("Listening on: {address:?}");
+    info!("Listening on: http://{address}");
 
-    serve(listener, app(db_conn.clone())).await.unwrap();
+    serve(listener, app(db_conn)).await.unwrap();
 }

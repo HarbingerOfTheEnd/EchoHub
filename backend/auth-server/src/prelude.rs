@@ -22,13 +22,13 @@ pub async fn get_db_conn() -> Arc<DbConn> {
 fn oauth_router(db: Arc<DbConn>) -> Router {
     Router::new()
         .route("/authorize", get(authorize))
-        .with_state(db.clone())
+        .with_state(db)
 }
 
 fn v1_router(db: Arc<DbConn>) -> Router {
-    Router::new().nest("/oauth", oauth_router(db.clone()))
+    Router::new().nest("/oauth", oauth_router(db))
 }
 
 pub fn app(db: Arc<DbConn>) -> Router {
-    Router::new().nest("/api/v1", v1_router(db.clone()))
+    Router::new().nest("/api/v1", v1_router(db))
 }
