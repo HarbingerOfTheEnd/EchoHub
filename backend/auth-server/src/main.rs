@@ -32,12 +32,15 @@ async fn main() {
         panic!("Failed to load .env file");
     }
 
+    let db_conn = get_db_conn().await;
+    info!("Connected to database");
+
     let address = var("ADDRESS")
         .expect("ADDRESS must be set")
         .parse::<SocketAddr>()
         .unwrap();
+    let listener = TcpListener::bind(&address).await.unwrap();
+    info!("Listening on: {address:?}");
 
-    let listener = TcpListener::bind(address).await.unwrap();
-
-    serve(listener, app()).await.unwrap();
+    serve(listener, app(db_conn.clone())).await.unwrap();
 }
