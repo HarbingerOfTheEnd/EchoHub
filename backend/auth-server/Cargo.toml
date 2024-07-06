@@ -1,3 +1,5 @@
+"$schema" = "https://json.schemastore.org/cargo.json"
+
 [package]
 name = "auth_server"
 version = "0.1.0"
@@ -5,7 +7,10 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.5"
+common = { path = "../common" }
 dotenvy = "0.15.7"
+http-body-util = "0.1.2"
+hyper = { version = "1.4.0", features = ["full"] }
 sea-orm = { version = "0.12.15", features = [
     "sqlx-postgres",
     "runtime-tokio-native-tls",
@@ -15,6 +20,7 @@ sea-orm = { version = "0.12.15", features = [
     "with-time",
 ] }
 tokio = { version = "1.38.0", features = ["full"] }
+tower = { version = "0.4.13", features = ["full"] }
 time = { version = "0.3.36", features = ["macros"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = [
