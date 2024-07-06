@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+sea-orm = { version = "0.12.15", features = [
+    "sqlx-postgres",
+    "runtime-tokio-native-tls",
+    "mock",
+    "macros",
+    "with-uuid",
+    "with-time",
+] }
+time = { version = "0.3.36", features = ["macros"] }
+uuid = { version = "1.9.1", features = ["v4", "fast-rng"] }
