@@ -1,7 +1,5 @@
-"$schema" = "https://json.schemastore.org/cargo.json"
-
 [package]
-name = "auth-server"
+name = "auth_server"
 version = "0.1.0"
 edition = "2021"
 
