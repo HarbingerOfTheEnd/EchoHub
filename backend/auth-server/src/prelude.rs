@@ -35,7 +35,7 @@ fn oauth_router(db: Arc<DbConn>) -> Router {
 }
 
 fn v1_router(db: Arc<DbConn>) -> Router {
-    Router::new().nest("/oauth", oauth_router(db))
+    Router::new().nest("/oauth2", oauth_router(db))
 }
 
 pub fn app(db: Arc<DbConn>) -> Router {
