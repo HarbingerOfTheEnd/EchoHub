@@ -5,17 +5,42 @@ use std::{env::var, path::Path};
 
 use axum::serve;
 use dotenvy::from_path;
-use tokio::net::TcpListener;
+use sentry::{release_name, ClientOptions};
+use tokio::{
+    net::TcpListener,
+    select,
+    signal::{
+        ctrl_c,
+        unix::{signal, SignalKind},
+    },
+};
 #[macro_use]
 extern crate tracing;
 use crate::prelude::*;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-fn init_tracing() {
-    tracing_subscriber::registry()
-        .with(EnvFilter::from_env("RUST_LOG"))
-        .with(tracing_subscriber::fmt::layer().pretty())
-        .init();
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        ctrl_c()
+            .await
+            .expect("Failed to install CTRL+C signal handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal(SignalKind::terminate())
+            .expect("Failed to install SIGTERM signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    select! {
+        _ = ctrl_c => info!("Received CTRL+C signal"),
+        _ = terminate => info!("Received SIGTERM signal"),
+
+    }
 }
 
 #[tokio::main]
@@ -32,6 +57,15 @@ async fn main() {
         panic!("Failed to load .env file");
     }
 
+    let dsn = var("SENTRY_DSN").expect("SENTRY_DSN must be set");
+    let _guard = sentry::init((
+        dsn,
+        ClientOptions {
+            release: release_name!(),
+            ..Default::default()
+        },
+    ));
+
     let db_conn = get_db_conn().await;
     info!("Connected to database");
 
@@ -39,5 +73,8 @@ async fn main() {
     let listener = TcpListener::bind(&address).await.unwrap();
     info!("Listening on: http://{address}");
 
-    serve(listener, app(db_conn)).await.unwrap();
+    serve(listener, app(db_conn))
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
 }
