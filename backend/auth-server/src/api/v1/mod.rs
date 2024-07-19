@@ -1,1 +1,1 @@
-pub mod oauth2;
+mod oauth2;

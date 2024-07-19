@@ -1,5 +1,5 @@
-pub(crate) mod api;
-pub(crate) mod prelude;
+mod api;
+mod prelude;
 
 use std::{env::var, path::Path};
 
