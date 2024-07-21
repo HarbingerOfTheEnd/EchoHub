@@ -1,3 +1,5 @@
+#:schema https://json.schemastore.org/cargo.json
+
 [workspace]
 resolver = "2"
 members = ["backend/auth-server", "backend/common"]

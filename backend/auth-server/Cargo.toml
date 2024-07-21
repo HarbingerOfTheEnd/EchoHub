@@ -1,3 +1,5 @@
+#:schema https://json.schemastore.org/cargo.json
+
 [package]
 name = "auth-server"
 version = "0.1.0"
@@ -30,3 +32,6 @@ tracing-subscriber = { version = "0.3.18", features = [
     "ansi",
     "time",
 ] }
+
+[dev-dependencies]
+serde_json = "1.0.120"
