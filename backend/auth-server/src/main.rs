@@ -1,5 +1,7 @@
 mod api;
 mod prelude;
+mod requests;
+mod responses;
 
 use std::{env::var, path::Path};
 
