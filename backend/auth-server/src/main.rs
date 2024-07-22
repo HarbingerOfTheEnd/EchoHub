@@ -47,10 +47,8 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn main() {
-    let envfile = Path::new("")
-        .join("backend")
-        .join("auth-server")
-        .join(".env");
+    let cwd = env!("CARGO_MANIFEST_DIR");
+    let envfile = Path::new(cwd).join(".env");
 
     if let Ok(()) = from_path(&envfile) {
         init_tracing();

@@ -4,14 +4,14 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(test, derive(Serialize, Default))]
-pub struct SignupRequest<'a> {
-    pub email: &'a str,
-    pub username: &'a str,
-    pub password: &'a str,
+pub struct SignupRequest {
+    pub email: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[cfg(test)]
-impl<'a> From<SignupRequest<'a>> for axum::body::Body {
+impl From<SignupRequest> for axum::body::Body {
     fn from(buf: SignupRequest) -> Self {
         serde_json::to_string(&buf).unwrap().into()
     }

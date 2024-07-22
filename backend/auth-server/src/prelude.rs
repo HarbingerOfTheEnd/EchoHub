@@ -6,7 +6,7 @@ use sea_orm::MockDatabase;
 use sea_orm::{Database, DbConn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::api::v1::oauth2::authorize;
+use crate::api::v1::auth::{signin, signup};
 
 pub fn init_tracing() {
     tracing_subscriber::registry()
@@ -28,16 +28,16 @@ pub async fn get_mock_db_conn() -> Arc<DbConn> {
     Arc::new(db.into_connection())
 }
 
-fn oauth_router(db: Arc<DbConn>) -> Router {
+fn auth_router() -> Router<Arc<DbConn>> {
     Router::new()
-        .route("/authorize", post(authorize))
-        .with_state(db)
+        .route("/auth/signup", post(signup))
+        .route("/auth/signin", post(signin))
 }
 
 fn v1_router(db: Arc<DbConn>) -> Router {
-    Router::new().nest("/oauth2", oauth_router(db))
+    Router::new().nest("/v1", auth_router().with_state(db))
 }
 
 pub fn app(db: Arc<DbConn>) -> Router {
-    Router::new().nest("/api/v1", v1_router(db))
+    Router::new().nest("/api", v1_router(db))
 }
