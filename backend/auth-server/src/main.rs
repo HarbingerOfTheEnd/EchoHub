@@ -3,22 +3,21 @@ mod prelude;
 mod requests;
 mod responses;
 
+#[cfg(not(unix))]
+use std::future::pending;
 use std::{env::var, path::Path};
 
 use axum::serve;
 use dotenvy::from_path;
 use sentry::{release_name, ClientOptions};
-use tokio::{
-    net::TcpListener,
-    select,
-    signal::{
-        ctrl_c,
-        unix::{signal, SignalKind},
-    },
-};
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::{net::TcpListener, select, signal::ctrl_c};
+
+use crate::prelude::*;
+
 #[macro_use]
 extern crate tracing;
-use crate::prelude::*;
 
 async fn shutdown_signal() {
     let ctrl_c = async {
@@ -36,11 +35,11 @@ async fn shutdown_signal() {
     };
 
     #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
+    let terminate = pending::<()>();
 
     select! {
-        _ = ctrl_c => info!("Received CTRL+C signal"),
-        _ = terminate => info!("Received SIGTERM signal"),
+        () = ctrl_c => info!("Received CTRL+C signal"),
+        () = terminate => info!("Received SIGTERM signal"),
 
     }
 }
