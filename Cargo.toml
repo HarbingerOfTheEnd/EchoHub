@@ -1,6 +1,3 @@
-[package]
-name = "echohub"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+members = ["backend/auth_server"]
+resolver = "3"
