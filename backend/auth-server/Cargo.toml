@@ -7,6 +7,7 @@ description = "Authentication service for a Discord-like chat application using 
 [dependencies]
 anyhow = "1.0.97"
 dotenvy = "0.15.7"
+prost = "0.13.5"
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.1", features = ["full"] }
 tonic = "0.13.0"
