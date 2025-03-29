@@ -1,0 +1,7 @@
+[package]
+name = "auth-server"
+version = "0.1.0"
+edition = "2024"
+description = "Authentication service for a Discord-like chat application using microservices."
+
+[dependencies]
