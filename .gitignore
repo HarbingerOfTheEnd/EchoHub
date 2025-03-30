@@ -88,6 +88,14 @@ gen-external-apklibs
 *.out
 *.app
 
+### certificates ###
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.priv
+
 ### Java ###
 # Compiled class file
 *.class
