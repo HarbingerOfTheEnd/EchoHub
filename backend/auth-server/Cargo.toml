@@ -10,7 +10,7 @@ dotenvy = "0.15.7"
 prost = "0.13.5"
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.1", features = ["full"] }
-tonic = { version = "0.13.0", features = ["server", "tls-native-roots"] }
+tonic = { version = "0.13.0", features = ["server", "tls-ring"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
 
