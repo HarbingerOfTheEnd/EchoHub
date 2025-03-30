@@ -1,0 +1,21 @@
+services:
+  auth-server:
+    depends_on:
+      - postgres
+    build:
+      context: backend/auth-server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: echohub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
