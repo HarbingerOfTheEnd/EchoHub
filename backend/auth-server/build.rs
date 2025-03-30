@@ -8,7 +8,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .join("auth.proto")];
     let includes = &[Path::new(env!("CARGO_MANIFEST_DIR")).join("protos")];
 
-    configure().compile_protos(protos, includes)?;
+    configure()
+        .build_client(false)
+        .build_server(true)
+        .compile_protos(protos, includes)?;
 
     Ok(())
 }
