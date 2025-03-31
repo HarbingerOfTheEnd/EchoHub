@@ -1,12 +1,15 @@
+#![allow(unused)]
 use std::{env::var, fs::read_to_string, net::SocketAddr, path::Path};
 
 use anyhow::{Context, Result};
-use auth::{AuthServer, auth_service_server::AuthServiceServer};
 use dotenvy::from_filename;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
+use tonic_reflection::server::Builder;
 use tracing_subscriber::{EnvFilter, fmt};
 #[macro_use]
 extern crate tracing;
+
+use crate::auth::{AuthServer, FILE_DESCRIPTOR_SET, auth_service_server::AuthServiceServer};
 
 mod auth;
 
@@ -41,11 +44,16 @@ async fn main() -> Result<()> {
 
     info!("Starting server on {addr:?}");
     let server = AuthServer;
+    let reflection_service = Builder::configure()
+        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
+        .build_v1()
+        .context("Failed to build reflection service")?;
 
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))
         .context("Failed to configure TLS")?
         .add_service(AuthServiceServer::new(server))
+        .add_service(reflection_service)
         .serve(addr)
         .await
         .context("Failed to start server")
