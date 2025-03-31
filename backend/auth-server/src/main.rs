@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 
     let cert_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("certs");
     if !cert_path.exists() {
-        return Err(anyhow::anyhow!("Certs directory does not exist").into());
+        return Err(anyhow::anyhow!("Certs directory does not exist"));
     }
 
     let cert =
