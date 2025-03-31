@@ -9,20 +9,19 @@ service AuthService {
 
 message SignupRequest {
   string username = 1;
-  string email    = 2;
+  string email = 2;
   string password = 3;
 }
 
 message SigninRequest {
-  string email    = 1;
+  string email = 1;
   string password = 2;
 }
 
 message TokenResponse {
-  string access_token   = 1;
-  string refresh_token  = 2;
-  string token_type     = 3;
-  uint64 expires_in     = 4;
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3;
+  uint64 expires_in = 4;
   repeated string scope = 5;
 }
-
