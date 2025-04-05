@@ -1,7 +1,7 @@
 #![allow(unused)]
 use std::{env::var, fs::read_to_string, net::SocketAddr, path::Path};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use dotenvy::from_filename;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
 
     let cert_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("certs");
     if !cert_path.exists() {
-        return Err(anyhow::anyhow!("Certs directory does not exist"));
+        return Err(anyhow!("Certs directory does not exist"));
     }
 
     let cert =
