@@ -8,6 +8,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use dotenvy::from_filename;
+use sea_orm::Database;
 use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -17,6 +18,7 @@ extern crate tracing;
 use crate::auth::{AuthServer, FILE_DESCRIPTOR_SET, auth_service_server::AuthServiceServer};
 
 mod auth;
+mod core;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -57,8 +59,15 @@ async fn main() -> Result<()> {
         .parse::<SocketAddr>()
         .context("ADDRESS is not in a proper format")?;
 
+    info!("Connecting to PostgreSQL");
+    let postgres_url = var("DATABASE_URL").context("DATABASE_URL not set")?;
+    let dbconn = Database::connect(&postgres_url)
+        .await
+        .context("Failed to connect to database")?;
+    info!("Connected to PostgreSQL server at {postgres_url}");
+
     info!("Starting server on {addr:?}");
-    let server = AuthServer;
+    let server = AuthServer::new(dbconn);
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build_v1alpha()
