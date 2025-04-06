@@ -5,8 +5,10 @@ use sea_orm::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: u64,
+    #[sea_orm(unique)]
     pub username: String,
     pub discriminator: u32,
+    #[sea_orm(unique)]
     pub email: String,
     pub password: String,
     pub email_verified: bool,
