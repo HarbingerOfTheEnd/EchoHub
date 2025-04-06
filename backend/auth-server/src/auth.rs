@@ -13,8 +13,8 @@ impl AuthService for AuthServer {
     #[instrument]
     async fn signup(
         &self,
-        _request: Request<SignupRequest>,
-    ) -> Result<Response<TokenResponse>, tonic::Status> {
+        request: Request<SignupRequest>,
+    ) -> Result<Response<TokenResponse>, Status> {
         info!("Received signup request");
         Ok(Response::new(TokenResponse::default()))
     }
@@ -23,7 +23,7 @@ impl AuthService for AuthServer {
     async fn signin(
         &self,
         _request: Request<SigninRequest>,
-    ) -> Result<Response<TokenResponse>, tonic::Status> {
+    ) -> Result<Response<TokenResponse>, Status> {
         info!("Received signin request");
         Ok(Response::new(TokenResponse::default()))
     }
