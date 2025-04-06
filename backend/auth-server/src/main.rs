@@ -1,9 +1,14 @@
 #![allow(unused)]
-use std::{env::var, fs::read_to_string, net::SocketAddr, path::Path};
+use std::{
+    env::var,
+    fs::{read, read_to_string},
+    net::SocketAddr,
+    path::Path,
+};
 
 use anyhow::{Context, Result, anyhow};
 use dotenvy::from_filename;
-use tonic::transport::{Identity, Server, ServerTlsConfig};
+use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
 use tracing_subscriber::{EnvFilter, fmt};
 #[macro_use]
@@ -28,7 +33,11 @@ async fn main() -> Result<()> {
         .init();
 
     let cert_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("certs");
-    if !cert_path.exists() {
+    let ca_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("ca");
+    if !cert_path.exists() || !cert_path.exists() {
         return Err(anyhow!("Certs directory does not exist"));
     }
 
@@ -36,6 +45,12 @@ async fn main() -> Result<()> {
         read_to_string(cert_path.join("auth-server.crt")).context("Failed to read certificate")?;
     let key = read_to_string(cert_path.join("auth-server.key")).context("Failed to read key")?;
     let identity = Identity::from_pem(cert, key);
+    let client_ca_root =
+        read_to_string(ca_path.join("ca.crt")).context("Failed to read ca cert")?;
+    let tls = ServerTlsConfig::new()
+        .identity(identity)
+        .client_auth_optional(false)
+        .client_ca_root(Certificate::from_pem(client_ca_root));
 
     let addr = var("ADDRESS")
         .context("ADDRESS not set")?
@@ -46,11 +61,11 @@ async fn main() -> Result<()> {
     let server = AuthServer;
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
-        .build_v1()
+        .build_v1alpha()
         .context("Failed to build reflection service")?;
 
     Server::builder()
-        .tls_config(ServerTlsConfig::new().identity(identity))
+        .tls_config(tls)
         .context("Failed to configure TLS")?
         .add_service(AuthServiceServer::new(server))
         .add_service(reflection_service)
