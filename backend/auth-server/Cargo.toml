@@ -6,6 +6,7 @@ description = "Authentication service for a Discord-like chat application using 
 
 [dependencies]
 anyhow = "1.0.97"
+bcrypt = "0.17.0"
 dotenvy = "0.15.7"
 prost = "0.13.5"
 sea-orm = { version = "1.1.8", features = [
