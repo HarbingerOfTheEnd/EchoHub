@@ -1,6 +1,7 @@
 #![allow(unused)]
 use std::{
     env::var,
+    fmt::Debug,
     fs::{read, read_to_string},
     net::SocketAddr,
     path::Path,
@@ -8,9 +9,11 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use dotenvy::from_filename;
-use sea_orm::Database;
+use migration::{Migrator, MigratorTrait};
+use sea_orm::{ConnectOptions, Database};
 use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
+use tracing::{Level, log::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt};
 #[macro_use]
 extern crate tracing;
@@ -61,13 +64,25 @@ async fn main() -> Result<()> {
 
     info!("Connecting to PostgreSQL");
     let postgres_url = var("DATABASE_URL").context("DATABASE_URL not set")?;
-    let dbconn = Database::connect(&postgres_url)
+    let mut connect_options = ConnectOptions::new(&postgres_url);
+    connect_options
+        .max_connections(5)
+        .min_connections(1)
+        .idle_timeout(std::time::Duration::from_secs(30))
+        .sqlx_logging(false)
+        .sqlx_logging_level(LevelFilter::Debug);
+    let db = Database::connect(connect_options)
         .await
         .context("Failed to connect to database")?;
     info!("Connected to PostgreSQL server at {postgres_url}");
 
+    info!("Applying migrations");
+    Migrator::up(&db, None)
+        .await
+        .context("Failed to apply migrations")?;
+
     info!("Starting server on {addr:?}");
-    let server = AuthServer::new(dbconn);
+    let server = AuthServer::new(db);
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build_v1alpha()
