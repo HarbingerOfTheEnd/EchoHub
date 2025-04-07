@@ -1,4 +1,5 @@
 use sea_orm::prelude::*;
+use time::PrimitiveDateTime;
 
 #[derive(Clone, Debug, DeriveEntityModel, Eq, PartialEq)]
 #[sea_orm(table_name = "users")]
@@ -12,7 +13,7 @@ pub struct Model {
     pub discriminator: u32,
     pub password: String,
     pub email_verified: bool,
-    pub created_at: DateTime,
+    pub created_at: PrimitiveDateTime,
 }
 
 #[derive(Clone, Debug, DeriveRelation, EnumIter)]
