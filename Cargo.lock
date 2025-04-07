@@ -307,6 +307,7 @@ dependencies = [
  "bcrypt",
  "dotenvy",
  "entity",
+ "lazy_static",
  "migration",
  "prost",
  "sea-orm",
