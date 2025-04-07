@@ -1,5 +1,5 @@
 use sea_orm::prelude::*;
-use time::PrimitiveDateTime;
+use time::OffsetDateTime;
 
 #[derive(Clone, Debug, DeriveEntityModel, Eq, PartialEq)]
 #[sea_orm(table_name = "users")]
@@ -13,7 +13,7 @@ pub struct Model {
     pub discriminator: u32,
     pub password: String,
     pub email_verified: bool,
-    pub created_at: PrimitiveDateTime,
+    pub created_at: OffsetDateTime,
 }
 
 #[derive(Clone, Debug, DeriveRelation, EnumIter)]
