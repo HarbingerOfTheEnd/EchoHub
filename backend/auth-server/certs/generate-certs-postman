@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+CA_DIR="../../ca"
+OPENSSL_CNF="./openssl-postman.cnf"
+CA_CERT="$CA_DIR/certs/ca.crt"
+CA_KEY="$CA_DIR/private/ca.key"
+CA_SERIAL="$CA_DIR/ca.srl"
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <client-name>"
+  exit 1
+fi
+
+CLIENT_NAME="$1"
+KEY_FILE="$CLIENT_NAME.key"
+CSR_FILE="${CLIENT_NAME}.csr"
+CRT_FILE="${CLIENT_NAME}.crt"
+PFX_FILE="${CLIENT_NAME}.pfx"
+
+openssl genpkey \
+    -algorithm RSA \
+    -pkeyopt rsa_keygen_bits:2048 \
+    -out "$KEY_FILE"
+chmod 400 "$KEY_FILE"
+
+openssl req \
+    -new -sha256 \
+    -key "$KEY_FILE" \
+    -out "$CSR_FILE" \
+    -subj "/CN=${CLIENT_NAME}"
+
+openssl x509 \
+    -req \
+    -in "$CSR_FILE" \
+    -CA "$CA_CERT" \
+    -CAkey "$CA_KEY" \
+    -CAserial "$CA_SERIAL" \
+    -CAcreateserial \
+    -out "$CRT_FILE" \
+    -days 365 \
+    -sha256 \
+    -extfile "$OPENSSL_CNF" \
+    -extensions v3_req
+
+chmod 444 "$CRT_FILE"
+
+openssl pkcs12 \
+    -export \
+    -inkey "$KEY_FILE" \
+    -in "$CRT_FILE" \
+    -certfile "$CA_CERT" \
+    -out "$PFX_FILE" \
+    -passout pass:
+
+echo "✅ Client certificate generated for Postman:"
+echo "  • Private Key: $KEY_FILE"
+echo "  • Certificate: $CRT_FILE"
+echo "  • PFX Bundle:  $PFX_FILE"
+

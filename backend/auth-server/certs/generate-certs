@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+CA_DIR="../../ca"
+OPENSSL_CNF="./openssl.cnf"
+CA_CERT="$CA_DIR/certs/ca.crt"
+CA_KEY="$CA_DIR/private/ca.key"
+CA_SERIAL="$CA_DIR/ca.srl"
+
+OUT_DIR="$(realpath $(dirname "$0"))"
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <common-name>"
+  exit 1
+fi
+
+CN="$1"
+KEY_FILE="$OUT_DIR/${CN}.key"
+CSR_FILE="$OUT_DIR/${CN}.csr"
+CRT_FILE="$OUT_DIR/${CN}.crt"
+
+openssl genpkey \
+    -algorithm RSA \
+    -pkeyopt rsa_keygen_bits:2048 \
+    -out "$KEY_FILE"
+chmod 400 "$KEY_FILE"
+
+openssl req \
+    -new -sha256 \
+    -key "$KEY_FILE" \
+    -out "$CSR_FILE" \
+    -subj "/CN=${CN}"
+
+openssl x509 \
+    -req \
+    -in "$CSR_FILE" \
+    -CA "$CA_CERT" \
+    -CAkey "$CA_KEY" \
+    -CAserial "$CA_SERIAL" \
+    -CAcreateserial \
+    -out "$CRT_FILE" \
+    -days 365 \
+    -sha256 \
+    -extfile "$OPENSSL_CNF" \
+    -extensions v3_req
+
+echo "✅ Certificate issued!"
+echo "  • Key:  $KEY_FILE"
+echo "  • CSR:  $CSR_FILE"
+echo "  • Cert: $CRT_FILE"
