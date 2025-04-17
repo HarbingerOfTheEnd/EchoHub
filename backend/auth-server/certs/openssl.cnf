@@ -14,4 +14,4 @@ CN = localhost
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
-subjectAltName = DNS:localhost
+subjectAltName = DNS:localhost, DNS:auth-server.local
