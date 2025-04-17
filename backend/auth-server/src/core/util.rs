@@ -9,14 +9,14 @@ use time::OffsetDateTime;
 const EPOCH: u64 = 1_735_689_600_000;
 lazy_static! {
     static ref SNOWFLAKE_BASE: u64 = {
-        let worker = var("NC_WORKER_ID")
-            .expect("NC_WORKER_ID not set")
+        let worker = var("EH_WORKER_ID")
+            .expect("EH_WORKER_ID not set")
             .parse::<u64>()
-            .expect("NC_WORKER_ID invalid");
-        let process = var("NC_PROCESS_ID")
-            .expect("NC_PROCESS_ID not set")
+            .expect("EH_WORKER_ID invalid");
+        let process = var("EH_PROCESS_ID")
+            .expect("EH_PROCESS_ID not set")
             .parse::<u64>()
-            .expect("NC_PROCESS_ID invalid");
+            .expect("EH_PROCESS_ID invalid");
         (worker << 17) + (process << 12)
     };
 }
