@@ -9,7 +9,7 @@ ST = State
 L = City
 O = Organization
 OU = OrgUnit
-CN = localhost
+CN = auth-server.local
 
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment
