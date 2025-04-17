@@ -10,7 +10,7 @@ pub struct Model {
     pub username: String,
     #[sea_orm(unique)]
     pub email: String,
-    pub discriminator: u32,
+    pub discriminator: i32,
     pub password: String,
     pub email_verified: bool,
     pub created_at: OffsetDateTime,
