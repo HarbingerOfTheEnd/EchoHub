@@ -46,12 +46,13 @@ async fn main() -> Result<()> {
         return Err(anyhow!("Certs directory does not exist"));
     }
 
-    let cert =
-        read_to_string(cert_path.join("auth-server.crt")).context("Failed to read certificate")?;
-    let key = read_to_string(cert_path.join("auth-server.key")).context("Failed to read key")?;
+    let cert = read_to_string(cert_path.join("auth-server.local.crt"))
+        .context("Failed to read certificate")?;
+    let key =
+        read_to_string(cert_path.join("auth-server.local.key")).context("Failed to read key")?;
     let identity = Identity::from_pem(cert, key);
     let client_ca_root =
-        read_to_string(ca_path.join("ca.crt")).context("Failed to read ca cert")?;
+        read_to_string(ca_path.join("certs").join("ca.crt")).context("Failed to read ca cert")?;
     let tls = ServerTlsConfig::new()
         .identity(identity)
         .client_auth_optional(false)
