@@ -1,4 +1,5 @@
 use entity::user;
+use rand::random_range;
 use sea_orm::{ActiveValue::Set, DeleteResult, prelude::*};
 use time::OffsetDateTime;
 
@@ -34,11 +35,13 @@ impl Mutation {
         password: &str,
     ) -> Result<user::Model, DbErr> {
         let now = (OffsetDateTime::now_utc().unix_timestamp() * 1_000) as u64;
+        let discriminator = random_range(1000..=9999);
         let new_user = user::ActiveModel {
             id: Set(generate_snowflake(now)),
             username: Set(username.to_string()),
             email: Set(email.to_string()),
             password: Set(password.to_string()),
+            discriminator: Set(discriminator),
             ..Default::default()
         };
 
