@@ -304,6 +304,7 @@ name = "auth-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "bcrypt",
  "dotenvy",
  "entity",
@@ -314,6 +315,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "sha2",
  "time",
  "tokio",
  "tonic",
