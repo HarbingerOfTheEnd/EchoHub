@@ -1,9 +1,14 @@
 use entity::{oauth2_token_pairs, users};
 use rand::random_range;
 use sea_orm::{ActiveValue::Set, DeleteResult, prelude::*};
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime};
 
 use crate::core::util::generate_snowflake;
+
+use super::{
+    enums::scope::Scope,
+    util::{ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN},
+};
 
 pub(crate) struct Query;
 pub(crate) struct Mutation;
@@ -66,14 +71,19 @@ impl Mutation {
         user_id: &str,
         access_token: &str,
         refresh_token: &str,
+        r#type: &str,
+        scope: i64,
     ) -> Result<oauth2_token_pairs::Model, DbErr> {
-        let now = (OffsetDateTime::now_utc().unix_timestamp() * 1_000) as u64;
+        let now = OffsetDateTime::now_utc();
         let new_token_pair = oauth2_token_pairs::ActiveModel {
-            id: Set(generate_snowflake(now)),
+            id: Set(generate_snowflake((now.unix_timestamp() * 1_000) as u64)),
             user_id: Set(user_id.to_string()),
             access_token: Set(access_token.to_string()),
             refresh_token: Set(refresh_token.to_string()),
-            ..Default::default()
+            r#type: Set(r#type.to_string()),
+            access_token_expires_at: Set(now + Duration::seconds(ACCESS_TOKEN_EXPIRES_IN as i64)),
+            refresh_token_expires_at: Set(now + Duration::seconds(REFRESH_TOKEN_EXPIRES_IN as i64)),
+            scope: Set(scope),
         };
 
         new_token_pair.insert(db).await
