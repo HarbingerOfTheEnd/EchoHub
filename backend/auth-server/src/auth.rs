@@ -9,6 +9,7 @@ use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set,
 
 use crate::core::{
     db::Mutation,
+    enums::scope::Scope,
     util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair},
 };
 
@@ -83,8 +84,15 @@ impl AuthService for AuthServer {
         info!("User created successfully: {:?}", user.id);
         let (access_token, refresh_token) = generate_token_pair(&user.id);
 
-        match Mutation::create_oauth2_token_pair(&self.db, &user.id, &access_token, &refresh_token)
-            .await
+        match Mutation::create_oauth2_token_pair(
+            &self.db,
+            &user.id,
+            &access_token,
+            &refresh_token,
+            "USER",
+            Scope::USER,
+        )
+        .await
         {
             Err(Query(SqlxError(Database(error)))) => {
                 match error.constraint() {
@@ -101,7 +109,7 @@ impl AuthService for AuthServer {
                         return Err(Status::already_exists("Refresh token already exists"));
                     }
                     _ => {
-                        error!("Database error: {error:?}");
+                        error!("Database error: {:?}", error.message());
                     }
                 }
                 return Err(Status::invalid_argument("Failed to create token pair"));
