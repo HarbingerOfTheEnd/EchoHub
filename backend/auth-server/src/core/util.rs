@@ -1,4 +1,3 @@
-use core::hash;
 use std::{
     env::var,
     sync::atomic::{AtomicU64, Ordering::SeqCst},
@@ -6,11 +5,14 @@ use std::{
 };
 
 use base64::{Engine, engine::general_purpose::STANDARD};
-use entity::users;
+use entity::{oauth2_token_pairs, users};
 use lazy_static::lazy_static;
+use sea_orm::{ActiveValue::Set, DbConn};
 use sha2::{Digest, Sha256};
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
+
+use super::{db::Mutation, enums::scope::Scope};
 
 const EPOCH: u64 = 1_735_689_600_000;
 pub const ACCESS_TOKEN_EXPIRES_IN: u64 = 60 * 60 * 24 * 30 * 2;
@@ -38,8 +40,8 @@ pub fn generate_snowflake(now: u64) -> String {
     id.to_string()
 }
 
-pub fn generate_token(user: &users::Model) -> String {
-    let user_id_part = STANDARD.encode(user.id.as_bytes());
+pub fn generate_token(user_id: &str) -> String {
+    let user_id_part = STANDARD.encode(user_id.as_bytes());
     let unique_part = format!(
         "{}{}",
         current().name().unwrap_or("unnamed"),
@@ -59,8 +61,9 @@ pub fn generate_token(user: &users::Model) -> String {
         .replace("/", "-")
 }
 
-pub fn generate_token_pair(user: &users::Model) -> (String, String) {
-    let access_token = generate_token(user);
-    let refresh_token = generate_token(user);
+pub fn generate_token_pair(user_id: &str) -> (String, String) {
+    let access_token = generate_token(user_id);
+    let refresh_token = generate_token(user_id);
+
     (access_token, refresh_token)
 }
