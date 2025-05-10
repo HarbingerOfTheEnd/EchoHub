@@ -15,7 +15,7 @@ pub struct Model {
     pub access_token_expires_at: TimeDateTimeWithTimeZone,
     pub refresh_token_expires_at: TimeDateTimeWithTimeZone,
     pub user_id: String,
-    pub scope: i32,
+    pub scope: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
