@@ -14,7 +14,7 @@ pub struct Model {
     pub discriminator: i32,
     pub password: String,
     pub email_verified: bool,
-    pub created_at: Option<TimeDateTimeWithTimeZone>,
+    pub created_at: TimeDateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
