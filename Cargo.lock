@@ -310,6 +310,7 @@ dependencies = [
  "entity",
  "lazy_static",
  "migration",
+ "once_cell",
  "prost",
  "rand 0.9.0",
  "sea-orm",
