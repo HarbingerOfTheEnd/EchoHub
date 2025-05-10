@@ -1,4 +1,4 @@
-use entity::users;
+use entity::{oauth2_token_pairs, users};
 use rand::random_range;
 use sea_orm::{ActiveValue::Set, DeleteResult, prelude::*};
 use time::OffsetDateTime;
@@ -59,5 +59,23 @@ impl Mutation {
 
     pub async fn delete_user(db: &DbConn, user_id: &str) -> Result<DeleteResult, DbErr> {
         users::Entity::delete_by_id(user_id).exec(db).await
+    }
+
+    pub async fn create_oauth2_token_pair(
+        db: &DbConn,
+        user_id: &str,
+        access_token: &str,
+        refresh_token: &str,
+    ) -> Result<oauth2_token_pairs::Model, DbErr> {
+        let now = (OffsetDateTime::now_utc().unix_timestamp() * 1_000) as u64;
+        let new_token_pair = oauth2_token_pairs::ActiveModel {
+            id: Set(generate_snowflake(now)),
+            user_id: Set(user_id.to_string()),
+            access_token: Set(access_token.to_string()),
+            refresh_token: Set(refresh_token.to_string()),
+            ..Default::default()
+        };
+
+        new_token_pair.insert(db).await
     }
 }
