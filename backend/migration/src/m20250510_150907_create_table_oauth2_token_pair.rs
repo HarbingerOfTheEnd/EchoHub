@@ -50,7 +50,11 @@ impl MigrationTrait for Migration {
                             .string_len(24)
                             .not_null(),
                     )
-                    .col(ColumnDef::new(Oauth2TokenPairs::Scope).integer().not_null())
+                    .col(
+                        ColumnDef::new(Oauth2TokenPairs::Scope)
+                            .big_integer()
+                            .not_null(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_oauth2_token_pairs_user_id")
