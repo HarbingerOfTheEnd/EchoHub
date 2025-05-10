@@ -18,10 +18,10 @@ use tracing_subscriber::{EnvFilter, fmt};
 #[macro_use]
 extern crate tracing;
 
-use crate::auth::{AuthServer, FILE_DESCRIPTOR_SET, auth_service_server::AuthServiceServer};
+use crate::v1::auth::{AuthServer, FILE_DESCRIPTOR_SET, auth_service_server::AuthServiceServer};
 
-mod auth;
 mod core;
+mod v1;
 
 #[tokio::main]
 async fn main() -> Result<()> {
