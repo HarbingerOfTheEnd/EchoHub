@@ -1,10 +1,18 @@
 syntax = "proto3";
 
+import "google/api/annotations.proto";
+
 package v1.auth;
 
 service AuthService {
   rpc Signup(SignupRequest) returns (TokenResponse);
   rpc Signin(SigninRequest) returns (TokenResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {
+    option (google.api.http) = {
+      get : "/v1/verify-email"
+      additional_bindings : {get : "/verify-email"}
+    };
+  }
 }
 
 message SignupRequest {
@@ -25,3 +33,7 @@ message TokenResponse {
   uint64 expires_in = 4;
   repeated string scope = 5;
 }
+
+message VerifyEmailRequest { string token = 1; }
+
+message VerifyEmailResponse {}
