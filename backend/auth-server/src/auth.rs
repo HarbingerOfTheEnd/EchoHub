@@ -1,8 +1,14 @@
 use std::sync::Arc;
 
 use auth_service_server::AuthService;
-use sea_orm::DatabaseConnection;
+use bcrypt::{DEFAULT_COST, hash};
+use sea_orm::{DatabaseConnection, DbErr::Query, RuntimeErr::SqlxError, sqlx::Error::Database};
 use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set, include_proto};
+
+use crate::core::{
+    db::Mutation,
+    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token},
+};
 
 include_proto!("auth");
 
@@ -21,16 +27,69 @@ impl AuthServer {
 
 #[async_trait]
 impl AuthService for AuthServer {
-    #[instrument]
+    #[instrument(skip_all)]
     async fn signup(
         &self,
         request: Request<SignupRequest>,
     ) -> Result<Response<TokenResponse>, Status> {
-        info!("Received signup request");
-        Ok(Response::new(TokenResponse::default()))
+        let SignupRequest {
+            username,
+            password,
+            email,
+        } = request.into_inner();
+
+        if username.is_empty() || password.is_empty() || email.is_empty() {
+            return Err(Status::invalid_argument("All fields are required"));
+        }
+
+        info!(
+            "Received signup request: username={}, email={}",
+            username, email
+        );
+
+        let hashed_password = hash(password, DEFAULT_COST)
+            .map_err(|_| Status::internal("Failed to hash password"))?;
+
+        let user = match Mutation::create_user(&self.db, &username, &email, &hashed_password).await
+        {
+            Ok(user) => {
+                info!("User created successfully: {:?}", user.id);
+                user
+            }
+            Err(Query(SqlxError(Database(error)))) => {
+                match error.constraint() {
+                    Some("users_username_key") => {
+                        error!("Username already exists: {error:?}");
+                        return Err(Status::already_exists("Username already exists"));
+                    }
+                    Some("users_email_key") => {
+                        error!("Email already exists: {error:?}");
+                        return Err(Status::already_exists("Email already exists"));
+                    }
+                    _ => {
+                        error!("Database error: {error:?}");
+                    }
+                }
+                return Err(Status::invalid_argument("Failed to create user due"));
+            }
+            Err(err) => {
+                error!("Failed to create user: {err:?}");
+                return Err(Status::internal("Failed to create user"));
+            }
+        };
+
+        let response = TokenResponse {
+            access_token: generate_token(&user),
+            refresh_token: generate_token(&user),
+            token_type: String::from("Bearer"),
+            expires_in: ACCESS_TOKEN_EXPIRES_IN,
+            scope: vec![String::from("USER")],
+        };
+
+        Ok(Response::new(response))
     }
 
-    #[instrument]
+    #[instrument(skip_all)]
     async fn signin(
         &self,
         _request: Request<SigninRequest>,
