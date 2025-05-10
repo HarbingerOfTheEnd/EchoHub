@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use auth_service_server::AuthService;
 use bcrypt::{DEFAULT_COST, hash};
-use sea_orm::{DatabaseConnection, DbErr::Query, RuntimeErr::SqlxError, sqlx::Error::Database};
+use sea_orm::{
+    DatabaseConnection, DbErr::Query, RuntimeErr::SqlxError, error, sqlx::Error::Database,
+};
 use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set, include_proto};
 
 use crate::core::{
     db::Mutation,
-    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token},
+    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair},
 };
 
 include_proto!("auth");
@@ -78,9 +80,40 @@ impl AuthService for AuthServer {
             }
         };
 
+        info!("User created successfully: {:?}", user.id);
+        let (access_token, refresh_token) = generate_token_pair(&user.id);
+
+        match Mutation::create_oauth2_token_pair(&self.db, &user.id, &access_token, &refresh_token)
+            .await
+        {
+            Err(Query(SqlxError(Database(error)))) => {
+                match error.constraint() {
+                    Some("oauth2_token_pairs_user_id_fkey") => {
+                        error!("User not found: {error:?}");
+                        return Err(Status::not_found("User not found"));
+                    }
+                    Some("oauth2_token_pairs_access_token_key") => {
+                        error!("Access token already exists: {error:?}");
+                        return Err(Status::already_exists("Access token already exists"));
+                    }
+                    Some("oauth2_token_pairs_refresh_token_key") => {
+                        error!("Refresh token already exists: {error:?}");
+                        return Err(Status::already_exists("Refresh token already exists"));
+                    }
+                    _ => {
+                        error!("Database error: {error:?}");
+                    }
+                }
+                return Err(Status::invalid_argument("Failed to create token pair"));
+            }
+            _ => {
+                info!("Token pair created successfully");
+            }
+        }
+
         let response = TokenResponse {
-            access_token: generate_token(&user),
-            refresh_token: generate_token(&user),
+            access_token,
+            refresh_token,
             token_type: String::from("Bearer"),
             expires_in: ACCESS_TOKEN_EXPIRES_IN,
             scope: vec![String::from("USER")],
