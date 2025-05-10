@@ -13,7 +13,7 @@ use crate::core::{
     util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair},
 };
 
-include_proto!("auth");
+include_proto!("v1.auth");
 
 pub(crate) const FILE_DESCRIPTOR_SET: &[u8] = include_file_descriptor_set!("auth_descriptor");
 
@@ -137,5 +137,14 @@ impl AuthService for AuthServer {
     ) -> Result<Response<TokenResponse>, Status> {
         info!("Received signin request");
         Ok(Response::new(TokenResponse::default()))
+    }
+
+    #[instrument(skip_all)]
+    async fn verify_email(
+        &self,
+        _request: Request<VerifyEmailRequest>,
+    ) -> Result<Response<VerifyEmailResponse>, Status> {
+        info!("Received verify email request");
+        Ok(Response::new(VerifyEmailResponse::default()))
     }
 }
