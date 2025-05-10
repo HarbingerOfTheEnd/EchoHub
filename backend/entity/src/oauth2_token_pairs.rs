@@ -10,8 +10,8 @@ pub struct Model {
     pub r#type: String,
     #[sea_orm(column_type = "Text", unique)]
     pub access_token: String,
-    #[sea_orm(column_type = "Text", nullable, unique)]
-    pub refresh_token: Option<String>,
+    #[sea_orm(column_type = "Text", unique)]
+    pub refresh_token: String,
     pub access_token_expires_at: TimeDateTimeWithTimeZone,
     pub refresh_token_expires_at: TimeDateTimeWithTimeZone,
     pub user_id: String,

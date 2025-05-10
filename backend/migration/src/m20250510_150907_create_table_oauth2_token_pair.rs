@@ -32,6 +32,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Oauth2TokenPairs::RefreshToken)
                             .text()
                             .unique_key()
+                            .not_null()
                             .default(Value::String(None)),
                     )
                     .col(
