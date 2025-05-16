@@ -4,12 +4,15 @@ use std::{
     thread::current,
 };
 
+use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use entity::{oauth2_token_pairs, users};
 use lazy_static::lazy_static;
+use lettre::{Message, SmtpTransport, Transport, transport::smtp::authentication::Credentials};
 use sea_orm::{ActiveValue::Set, DbConn};
 use sha2::{Digest, Sha256};
 use time::{Duration, OffsetDateTime};
+use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use super::{db::Mutation, enums::scope::Scope};
@@ -66,4 +69,30 @@ pub fn generate_token_pair(user_id: &str) -> (String, String) {
     let refresh_token = generate_token(user_id);
 
     (access_token, refresh_token)
+}
+
+pub async fn send_email(to: &str, subject: &str, body: &str) -> Result<()> {
+    let from = var("EH_EMAIL").context("EH_EMAIL not set")?;
+    let password = var("EH_EMAIL_PASSWORD").context("EH_EMAIL_PASSWORD not set")?;
+    let smtp_server = "smtp.gmail.com";
+    let smtp_port = 587;
+
+    let email = Message::builder()
+        .from(from.parse()?)
+        .to(to.parse()?)
+        .subject(subject)
+        .body(String::from(body))?;
+
+    let mailer = SmtpTransport::relay(smtp_server)
+        .context("Failed to create SMTP transport")?
+        .port(smtp_port)
+        .credentials(Credentials::new(from.clone(), password))
+        .build();
+
+    spawn_blocking(move || {
+        mailer.send(&email);
+    })
+    .await?;
+
+    Ok(())
 }
