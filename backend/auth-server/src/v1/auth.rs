@@ -10,7 +10,7 @@ use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set,
 use crate::core::{
     db::Mutation,
     enums::scope::Scope,
-    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair},
+    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair, send_email},
 };
 
 include_proto!("v1.auth");
@@ -117,6 +117,10 @@ impl AuthService for AuthServer {
             _ => {
                 info!("Token pair created successfully");
             }
+        }
+
+        match send_email(&email, "Welcome to EchoHub!", r#""#) {
+            _ => {}
         }
 
         let response = TokenResponse {
