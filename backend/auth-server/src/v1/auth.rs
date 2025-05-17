@@ -137,10 +137,95 @@ impl AuthService for AuthServer {
     #[instrument(skip_all)]
     async fn signin(
         &self,
-        _request: Request<SigninRequest>,
+        request: Request<SigninRequest>,
     ) -> Result<Response<TokenResponse>, Status> {
-        info!("Received signin request");
-        Ok(Response::new(TokenResponse::default()))
+        let SigninRequest { email, password } = request.into_inner();
+        if email.is_empty() || password.is_empty() {
+            return Err(Status::invalid_argument("All fields are required"));
+        }
+
+        info!("Received signin request: email={email}");
+        let user = match Query::get_user_by_email(&self.db, &email).await {
+            Ok(Some(user)) => {
+                info!("User found: {:?}", user.id);
+                user
+            }
+            Ok(None) => {
+                error!("User not found");
+                return Err(Status::not_found("User not found"));
+            }
+            Err(QueryErr(SqlxError(Database(error)))) => {
+                match error.constraint() {
+                    Some("users_email_key") => {
+                        error!("Email not found: {error:?}");
+                        return Err(Status::not_found("Email not found"));
+                    }
+                    _ => {
+                        error!("Database error: {error:?}");
+                    }
+                }
+                return Err(Status::invalid_argument("Failed to find user"));
+            }
+            Err(err) => {
+                error!("Failed to find user: {err:?}");
+                return Err(Status::internal("Failed to find user"));
+            }
+        };
+        let hashed_password = hash(password, DEFAULT_COST)
+            .map_err(|_| Status::internal("Failed to hash password"))?;
+        let verified = verify(&user.password, &hashed_password)
+            .map_err(|_| Status::internal("Failed to verify password"))?;
+
+        if !verified {
+            error!("Invalid password");
+            return Err(Status::unauthenticated("Invalid password"));
+        }
+
+        let (access_token, refresh_token) = generate_token_pair(&user.id);
+        match Mutation::create_oauth2_token_pair(
+            &self.db,
+            &user.id,
+            &access_token,
+            &refresh_token,
+            "USER",
+            Scope::USER,
+        )
+        .await
+        {
+            Err(QueryErr(SqlxError(Database(error)))) => {
+                match error.constraint() {
+                    Some("oauth2_token_pairs_user_id_fkey") => {
+                        error!("User not found: {error:?}");
+                        return Err(Status::not_found("User not found"));
+                    }
+                    Some("oauth2_token_pairs_access_token_key") => {
+                        error!("Access token already exists: {error:?}");
+                        return Err(Status::already_exists("Access token already exists"));
+                    }
+                    Some("oauth2_token_pairs_refresh_token_key") => {
+                        error!("Refresh token already exists: {error:?}");
+                        return Err(Status::already_exists("Refresh token already exists"));
+                    }
+                    _ => {
+                        error!("Database error: {:?}", error.message());
+                    }
+                }
+                return Err(Status::invalid_argument("Failed to create token pair"));
+            }
+            _ => {
+                info!("Token pair created successfully");
+            }
+        }
+
+        let response = TokenResponse {
+            access_token,
+            refresh_token,
+            token_type: String::from("Bearer"),
+            expires_in: ACCESS_TOKEN_EXPIRES_IN,
+            scope: vec![String::from("USER")],
+        };
+
+        Ok(Response::new(response))
     }
 
     #[instrument(skip_all)]
