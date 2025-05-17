@@ -5,12 +5,21 @@ import "google/api/annotations.proto";
 package v1.auth;
 
 service AuthService {
-  rpc Signup(SignupRequest) returns (TokenResponse);
-  rpc Signin(SigninRequest) returns (TokenResponse);
+  rpc Signup(SignupRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post : "/v1/signup"
+      body : "*"
+    };
+  }
+  rpc Signin(SigninRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post : "/v1/signin"
+      body : "*"
+    };
+  }
   rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {
     option (google.api.http) = {
       get : "/v1/verify-email"
-      additional_bindings : {get : "/verify-email"}
     };
   }
 }
