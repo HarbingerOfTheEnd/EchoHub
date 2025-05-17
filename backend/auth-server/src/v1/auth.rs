@@ -1,16 +1,21 @@
 use std::sync::Arc;
 
 use auth_service_server::AuthService;
-use bcrypt::{DEFAULT_COST, hash};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use sea_orm::{
-    DatabaseConnection, DbErr::Query, RuntimeErr::SqlxError, error, sqlx::Error::Database,
+    DatabaseConnection,
+    DbErr::{Query as QueryErr, RecordNotFound},
+    RuntimeErr::SqlxError,
+    error,
+    sqlx::Error::Database,
 };
+use serde_json::Value;
 use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set, include_proto};
 
 use crate::core::{
-    db::Mutation,
+    db::{Mutation, Query},
     enums::scope::Scope,
-    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair, send_email},
+    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair, parse_jwt_token, send_email},
 };
 
 include_proto!("v1.auth");
@@ -45,10 +50,7 @@ impl AuthService for AuthServer {
             return Err(Status::invalid_argument("All fields are required"));
         }
 
-        info!(
-            "Received signup request: username={}, email={}",
-            username, email
-        );
+        info!("Received signup request: username={username}, email={email}");
 
         let hashed_password = hash(password, DEFAULT_COST)
             .map_err(|_| Status::internal("Failed to hash password"))?;
@@ -59,7 +61,7 @@ impl AuthService for AuthServer {
                 info!("User created successfully: {:?}", user.id);
                 user
             }
-            Err(Query(SqlxError(Database(error)))) => {
+            Err(QueryErr(SqlxError(Database(error)))) => {
                 match error.constraint() {
                     Some("users_username_key") => {
                         error!("Username already exists: {error:?}");
@@ -94,7 +96,7 @@ impl AuthService for AuthServer {
         )
         .await
         {
-            Err(Query(SqlxError(Database(error)))) => {
+            Err(QueryErr(SqlxError(Database(error)))) => {
                 match error.constraint() {
                     Some("oauth2_token_pairs_user_id_fkey") => {
                         error!("User not found: {error:?}");
@@ -231,9 +233,36 @@ impl AuthService for AuthServer {
     #[instrument(skip_all)]
     async fn verify_email(
         &self,
-        _request: Request<VerifyEmailRequest>,
+        request: Request<VerifyEmailRequest>,
     ) -> Result<Response<VerifyEmailResponse>, Status> {
-        info!("Received verify email request");
+        let VerifyEmailRequest { token } = request.into_inner();
+        if token.is_empty() {
+            return Err(Status::invalid_argument("Token is required"));
+        }
+
+        let token =
+            parse_jwt_token(&token).map_err(|_| Status::invalid_argument("Invalid token"))?;
+        let user_id = token
+            .get("user_id")
+            .unwrap_or(&Value::String("".to_string()))
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+
+        match Mutation::verify_email(&self.db, &user_id).await {
+            Ok(_) => {
+                info!("Email verified successfully");
+            }
+            Err(RecordNotFound(e)) => {
+                error!("Record not found: {e:?}");
+                return Err(Status::not_found("User not found"));
+            }
+            Err(e) => {
+                error!("Failed to verify email: {e:?}");
+                return Err(Status::internal("Failed to verify email"));
+            }
+        }
+
         Ok(Response::new(VerifyEmailResponse::default()))
     }
 }
