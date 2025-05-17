@@ -88,4 +88,18 @@ impl Mutation {
 
         new_token_pair.insert(db).await
     }
+
+    pub async fn verify_email(db: &DbConn, user_id: &str) -> Result<users::Model, DbErr> {
+        let user = users::Entity::find_by_id(user_id)
+            .one(db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("User not found".to_string()))?;
+
+        let mut user = users::ActiveModel {
+            email_verified: Set(true),
+            ..user.into()
+        };
+
+        user.update(db).await
+    }
 }
