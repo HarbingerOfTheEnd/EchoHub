@@ -33,11 +33,11 @@ impl Scope {
     }
 
     pub fn grants_all(bitfield: i64, scopes: &[i64]) -> bool {
-        scopes.iter().all(|s| (bitfield & s) == *s)
+        scopes.iter().all(|s| (bitfield & *s) == *s)
     }
 
     pub fn grants_any(bitfield: i64, scopes: &[i64]) -> bool {
-        scopes.iter().any(|s| (bitfield & s) == *s)
+        scopes.iter().any(|s| (bitfield & *s) == *s)
     }
 
     fn scope_value_map() -> &'static HashMap<&'static str, i64> {
