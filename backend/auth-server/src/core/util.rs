@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env::var,
     sync::atomic::{AtomicU64, Ordering::SeqCst},
     thread::current,
@@ -7,15 +8,49 @@ use std::{
 use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use entity::{oauth2_token_pairs, users};
+use jsonwebtoken::{
+    Algorithm::HS256, DecodingKey, EncodingKey, Header, Validation, decode, encode,
+};
 use lazy_static::lazy_static;
 use lettre::{Message, SmtpTransport, Transport, transport::smtp::authentication::Credentials};
 use sea_orm::{ActiveValue::Set, DbConn};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use time::{Duration, OffsetDateTime};
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use super::{db::Mutation, enums::scope::Scope};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct Claims {
+    user_id: String,
+    exp: usize,
+}
+
+impl From<HashMap<String, Value>> for Claims {
+    fn from(value: HashMap<String, Value>) -> Self {
+        let user_id = value
+            .get("user_id")
+            .unwrap_or(&Value::String("".to_string()))
+            .as_str()
+            .unwrap()
+            .to_string();
+        let exp = value
+            .get("exp")
+            .unwrap_or(&Value::Number(0.into()))
+            .as_i64()
+            .unwrap_or(0);
+
+        let exp = OffsetDateTime::now_utc()
+            .checked_add(Duration::seconds(exp))
+            .expect("valid timestamp")
+            .unix_timestamp() as usize;
+
+        Self { user_id, exp }
+    }
+}
 
 const EPOCH: u64 = 1_735_689_600_000;
 pub const ACCESS_TOKEN_EXPIRES_IN: u64 = 60 * 60 * 24 * 30 * 2;
@@ -95,4 +130,23 @@ pub async fn send_email(to: &str, subject: &str, body: &str) -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+pub fn generate_jwt_token(claims: &HashMap<String, Value>) -> Result<String> {
+    let header = Header::new(HS256);
+    let claims = Claims::from(claims.clone());
+    let secret = var("EH_JWT_SECRET").context("EH_JWT_SECRET not set")?;
+    let key = EncodingKey::from_secret(secret.as_ref());
+
+    encode(&header, &claims, &key).context("Failed to encode JWT token")
+}
+
+pub fn parse_jwt_token(token: &str) -> Result<HashMap<String, Value>> {
+    let secret = var("EH_JWT_SECRET").context("EH_JWT_SECRET not set")?;
+    let key = DecodingKey::from_secret(secret.as_ref());
+    let validation = Validation::new(HS256);
+
+    let token = decode(token, &key, &validation).context("Failed to decode JWT token")?;
+
+    return Ok(token.claims);
 }
