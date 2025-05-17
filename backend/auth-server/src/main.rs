@@ -1,7 +1,6 @@
 #![allow(unused)]
 use std::{
     env::var,
-    fmt::Debug,
     fs::{read, read_to_string},
     net::SocketAddr,
     path::Path,
@@ -13,7 +12,7 @@ use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database};
 use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
-use tracing::{Level, log::LevelFilter};
+use tracing::{Level, log::LevelFilter::Debug};
 use tracing_subscriber::{EnvFilter, fmt};
 #[macro_use]
 extern crate tracing;
@@ -29,8 +28,6 @@ async fn main() -> Result<()> {
     from_filename(env_path).context("Failed to load .env file")?;
 
     fmt()
-        .with_file(true)
-        .with_line_number(true)
         .with_target(true)
         .with_level(true)
         .with_ansi(true)
@@ -71,11 +68,11 @@ async fn main() -> Result<()> {
         .min_connections(1)
         .idle_timeout(std::time::Duration::from_secs(30))
         .sqlx_logging(false)
-        .sqlx_logging_level(LevelFilter::Debug);
+        .sqlx_logging_level(Debug);
     let db = Database::connect(connect_options)
         .await
         .context("Failed to connect to database")?;
-    info!("Connected to PostgreSQL server at {postgres_url}");
+    info!("Connected to PostgreSQL server");
 
     info!("Applying migrations");
     Migrator::up(&db, None)
