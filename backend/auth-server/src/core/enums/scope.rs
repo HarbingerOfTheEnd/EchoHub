@@ -54,3 +54,109 @@ impl Scope {
         &MAP
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bitfield_from_scopes_single() {
+        assert_eq!(Scope::bitfield_from_scopes(&["user"]), Scope::USER);
+        assert_eq!(Scope::bitfield_from_scopes(&["bot"]), Scope::BOT);
+        assert_eq!(
+            Scope::bitfield_from_scopes(&["identity.read"]),
+            Scope::IDENTITY_READ
+        );
+        assert_eq!(
+            Scope::bitfield_from_scopes(&["guilds.read"]),
+            Scope::GUILDS_READ
+        );
+        assert_eq!(
+            Scope::bitfield_from_scopes(&["guilds.join"]),
+            Scope::GUILDS_JOIN
+        );
+        assert_eq!(
+            Scope::bitfield_from_scopes(&["guilds.member.read"]),
+            Scope::GUILDS_MEMBER_READ
+        );
+    }
+
+    #[test]
+    fn test_bitfield_from_scopes_multiple() {
+        let scopes = ["user", "bot", "guilds.read"];
+        let expected = Scope::USER | Scope::BOT | Scope::GUILDS_READ;
+        assert_eq!(Scope::bitfield_from_scopes(&scopes), expected);
+    }
+
+    #[test]
+    fn test_bitfield_from_scopes_invalid() {
+        let scopes = ["invalid", "user"];
+        assert_eq!(Scope::bitfield_from_scopes(&scopes), Scope::USER);
+    }
+
+    #[test]
+    fn test_scopes_from_bitfield_single() {
+        let bitfield = Scope::BOT;
+        let scopes = Scope::scopes_from_bitfield(bitfield);
+        assert_eq!(scopes, vec!["bot"]);
+    }
+
+    #[test]
+    fn test_scopes_from_bitfield_multiple() {
+        let bitfield = Scope::USER | Scope::IDENTITY_READ | Scope::GUILDS_JOIN;
+        let mut scopes = Scope::scopes_from_bitfield(bitfield);
+        scopes.sort();
+        let mut expected = vec!["user", "identity.read", "guilds.join"];
+        expected.sort();
+        assert_eq!(scopes, expected);
+    }
+
+    #[test]
+    fn test_scopes_from_bitfield_none() {
+        let bitfield = 0;
+        let scopes = Scope::scopes_from_bitfield(bitfield);
+        assert!(scopes.is_empty());
+    }
+
+    #[test]
+    fn test_grants_all_true() {
+        let bitfield = Scope::USER | Scope::BOT | Scope::GUILDS_READ;
+        let scopes = [Scope::USER, Scope::BOT];
+        assert!(Scope::grants_all(bitfield, &scopes));
+    }
+
+    #[test]
+    fn test_grants_all_false() {
+        let bitfield = Scope::USER | Scope::BOT;
+        let scopes = [Scope::USER, Scope::GUILDS_READ];
+        assert!(!Scope::grants_all(bitfield, &scopes));
+    }
+
+    #[test]
+    fn test_grants_any_true() {
+        let bitfield = Scope::USER | Scope::BOT;
+        let scopes = [Scope::GUILDS_READ, Scope::BOT];
+        assert!(Scope::grants_any(bitfield, &scopes));
+    }
+
+    #[test]
+    fn test_grants_any_false() {
+        let bitfield = Scope::USER;
+        let scopes = [Scope::BOT, Scope::GUILDS_READ];
+        assert!(!Scope::grants_any(bitfield, &scopes));
+    }
+
+    #[test]
+    fn test_scope_value_map_contents() {
+        let map = Scope::scope_value_map();
+        assert_eq!(map.get("user"), Some(&Scope::USER));
+        assert_eq!(map.get("bot"), Some(&Scope::BOT));
+        assert_eq!(map.get("identity.read"), Some(&Scope::IDENTITY_READ));
+        assert_eq!(map.get("guilds.read"), Some(&Scope::GUILDS_READ));
+        assert_eq!(map.get("guilds.join"), Some(&Scope::GUILDS_JOIN));
+        assert_eq!(
+            map.get("guilds.member.read"),
+            Some(&Scope::GUILDS_MEMBER_READ)
+        );
+        assert!(map.get("invalid").is_none());
+    }
+}
