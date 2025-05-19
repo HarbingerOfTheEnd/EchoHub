@@ -83,7 +83,6 @@ impl AuthService for AuthServer {
             }
         };
 
-        info!("User created successfully: {:?}", user.id);
         let (access_token, refresh_token) = generate_token_pair(&user.id);
 
         match Mutation::create_oauth2_token_pair(
@@ -121,8 +120,27 @@ impl AuthService for AuthServer {
             }
         }
 
-        match send_email(&email, "Welcome to EchoHub!", r#""#) {
-            _ => {}
+        let send_email_future = send_email(
+            &email,
+            "Welcome to EchoHub!",
+            r#"
+                <html>
+                    <body>
+                        <h1>Welcome to EchoHub!</h1>
+                        <p>Thank you for signing up. Please verify your email address.</p>
+                    </body>
+                </html>
+            "#,
+        );
+
+        match send_email_future.await {
+            Ok(()) => {
+                info!("Email sent successfully to {email}");
+            }
+            Err(e) => {
+                error!("Failed to send email: {e:?}");
+                return Err(Status::internal("Failed to send email"));
+            }
         }
 
         let response = TokenResponse {
