@@ -52,22 +52,37 @@ impl From<HashMap<String, Value>> for Claims {
     }
 }
 
-const EPOCH: u64 = 1_735_689_600_000;
+pub const EPOCH: u64 = 1_735_689_600_000;
 pub const ACCESS_TOKEN_EXPIRES_IN: u64 = 60 * 60 * 24 * 30 * 2;
 pub const REFRESH_TOKEN_EXPIRES_IN: u64 = 60 * 60 * 24 * 30 * 6;
-lazy_static! {
-    static ref SNOWFLAKE_BASE: u64 = {
-        let worker = var("EH_WORKER_ID")
-            .expect("EH_WORKER_ID not set")
-            .parse::<u64>()
-            .expect("EH_WORKER_ID invalid");
-        let process = var("EH_PROCESS_ID")
-            .expect("EH_PROCESS_ID not set")
-            .parse::<u64>()
-            .expect("EH_PROCESS_ID invalid");
-        (worker << 17) + (process << 12)
-    };
-}
+
+static SNOWFLAKE_BASE: Lazy<u64> = Lazy::new(|| {
+    let worker = var("EH_WORKER_ID")
+        .expect("EH_WORKER_ID not set")
+        .parse::<u64>()
+        .expect("EH_WORKER_ID invalid");
+    let process = var("EH_PROCESS_ID")
+        .expect("EH_PROCESS_ID not set")
+        .parse::<u64>()
+        .expect("EH_PROCESS_ID invalid");
+    (worker << 17) + (process << 12)
+});
+static FROM: Lazy<String> = Lazy::new(|| var("EH_EMAIL").expect("EH_EMAIL not set"));
+static MAILER: Lazy<SmtpTransport> = Lazy::new(|| {
+    let smtp_server = var("EH_SMTP_SERVER").expect("EH_SMTP_SERVER not set");
+    let smtp_port = var("EH_SMTP_PORT")
+        .expect("EH_SMTP_PORT not set")
+        .parse::<u16>()
+        .expect("EH_SMTP_PORT invalid");
+    let from = FROM.clone();
+    let password = var("EH_EMAIL_PASSWORD").expect("EH_EMAIL_PASSWORD not set");
+
+    SmtpTransport::relay(&smtp_server)
+        .expect("Failed to create SMTP transport")
+        .port(smtp_port)
+        .credentials(Credentials::new(from, password))
+        .build()
+});
 static GENERATED_IDS: AtomicU64 = AtomicU64::new(0);
 
 pub fn generate_snowflake(now: u64) -> String {
@@ -107,27 +122,19 @@ pub fn generate_token_pair(user_id: &str) -> (String, String) {
 }
 
 pub async fn send_email(to: &str, subject: &str, body: &str) -> Result<()> {
-    let from = var("EH_EMAIL").context("EH_EMAIL not set")?;
-    let password = var("EH_EMAIL_PASSWORD").context("EH_EMAIL_PASSWORD not set")?;
-    let smtp_server = "smtp.gmail.com";
-    let smtp_port = 587;
+    let from = FROM.clone();
 
     let email = Message::builder()
         .from(from.parse()?)
         .to(to.parse()?)
         .subject(subject)
+        .header(ContentType::TEXT_HTML)
         .body(String::from(body))?;
 
-    let mailer = SmtpTransport::relay(smtp_server)
-        .context("Failed to create SMTP transport")?
-        .port(smtp_port)
-        .credentials(Credentials::new(from.clone(), password))
-        .build();
-
-    spawn_blocking(move || {
-        mailer.send(&email);
-    })
-    .await?;
+    spawn_blocking(move || MAILER.send(&email).context("Failed to send email"))
+        .await
+        .context("Unable to send")?
+        .context("Failed to send email")?;
 
     Ok(())
 }
