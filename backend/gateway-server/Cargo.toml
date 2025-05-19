@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-graphql = "7.0.16"
+async-graphql-axum = "7.0.16"
+axum = "0.8.4"
+prost = "0.13.5"
+tonic = { version = "0.13.1", features = ["channel", "tls-ring"] }
