@@ -12,10 +12,16 @@ use sea_orm::{
 use serde_json::Value;
 use tonic::{Request, Response, Status, async_trait, include_file_descriptor_set, include_proto};
 
-use crate::core::{
-    db::{Mutation, Query},
-    enums::scope::Scope,
-    util::{ACCESS_TOKEN_EXPIRES_IN, generate_token_pair, parse_jwt_token, send_email},
+use crate::{
+    core::{
+        db::{Mutation, Query},
+        enums::scope::Scope,
+        util::{
+            ACCESS_TOKEN_EXPIRES_IN, generate_jwt_token, generate_token_pair, parse_jwt_token,
+            send_email,
+        },
+    },
+    map,
 };
 
 include_proto!("v1.auth");
@@ -120,17 +126,28 @@ impl AuthService for AuthServer {
             }
         }
 
+        let jwt = generate_jwt_token(map! {
+            "user_id" => user.id,
+            "exp" => 600,
+        })
+        .map_err(|e| {
+            error!("Failed to generate JWT token: {e:?}");
+            Status::internal("Failed to generate JWT token")
+        })?;
         let send_email_future = send_email(
             &email,
             "Welcome to EchoHub!",
-            r#"
+            format!(
+                r#"
                 <html>
                     <body>
                         <h1>Welcome to EchoHub!</h1>
                         <p>Thank you for signing up. Please verify your email address.</p>
+                        <a href="https://auth-server.local:8000/v1/verify-email?token={jwt}">Verify Email</a>
                     </body>
                 </html>
-            "#,
+            "#
+            ),
         );
 
         match send_email_future.await {
