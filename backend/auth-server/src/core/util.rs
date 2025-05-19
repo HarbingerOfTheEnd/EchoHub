@@ -11,8 +11,11 @@ use entity::{oauth2_token_pairs, users};
 use jsonwebtoken::{
     Algorithm::HS256, DecodingKey, EncodingKey, Header, Validation, decode, encode,
 };
-use lazy_static::lazy_static;
-use lettre::{Message, SmtpTransport, Transport, transport::smtp::authentication::Credentials};
+use lettre::{
+    Message, SmtpTransport, Transport, message::header::ContentType,
+    transport::smtp::authentication::Credentials,
+};
+use once_cell::sync::Lazy;
 use sea_orm::{ActiveValue::Set, DbConn};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -156,4 +159,114 @@ pub fn parse_jwt_token(token: &str) -> Result<HashMap<String, Value>> {
     let token = decode(token, &key, &validation).context("Failed to decode JWT token")?;
 
     return Ok(token.claims);
+}
+#[cfg(test)]
+mod tests {
+    use std::{
+        env::{remove_var, set_var},
+        sync::Once,
+    };
+
+    use serde_json::json;
+
+    use super::*;
+
+    static INIT: Once = Once::new();
+
+    fn setup_env() {
+        INIT.call_once(|| unsafe {
+            set_var("EH_WORKER_ID", "1");
+            set_var("EH_PROCESS_ID", "2");
+            set_var("EH_EMAIL", "test@example.com");
+            set_var("EH_SMTP_SERVER", "smtp.example.com");
+            set_var("EH_SMTP_PORT", "587");
+            set_var("EH_EMAIL_PASSWORD", "password");
+            set_var("EH_JWT_SECRET", "supersecretkey");
+        });
+    }
+
+    #[test]
+    fn test_claims_from_hashmap() {
+        let mut map = HashMap::new();
+        map.insert("user_id".to_string(), json!("user123"));
+        map.insert("exp".to_string(), json!(3600));
+        let claims = Claims::from(map);
+        assert_eq!(claims.user_id, "user123");
+        assert!(claims.exp > 0);
+    }
+
+    #[test]
+    fn test_claims_from_hashmap_missing_fields() {
+        let map = HashMap::new();
+        let claims = Claims::from(map);
+        assert_eq!(claims.user_id, "");
+        assert!(claims.exp > 0);
+    }
+
+    #[test]
+    fn test_generate_snowflake_unique() {
+        setup_env();
+        let now = EPOCH + 100_000;
+        let id1 = generate_snowflake(now);
+        let id2 = generate_snowflake(now + 1);
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_generate_token_format() {
+        let token = generate_token("user123");
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 2);
+        let decoded = STANDARD.decode(parts[0]).unwrap();
+        assert_eq!(String::from_utf8(decoded).unwrap(), "user123");
+    }
+
+    #[test]
+    fn test_generate_token_pair_unique() {
+        let (access, refresh) = generate_token_pair("user123");
+        assert_ne!(access, refresh);
+    }
+
+    #[tokio::test]
+    async fn test_send_email_invalid_address() {
+        setup_env();
+        let result = send_email("invalid", "Subject", "Body").await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_generate_jwt_token_and_parse() {
+        setup_env();
+        let mut claims = HashMap::new();
+        claims.insert("user_id".to_string(), json!("user123"));
+        claims.insert("exp".to_string(), json!(3600));
+        let token = generate_jwt_token(&claims).unwrap();
+        let parsed = parse_jwt_token(&token).unwrap();
+        assert_eq!(parsed.get("user_id").unwrap(), "user123");
+    }
+
+    #[test]
+    fn test_generate_jwt_token_missing_secret() {
+        let mut claims = HashMap::new();
+        claims.insert("user_id".to_string(), json!("user123"));
+        claims.insert("exp".to_string(), json!(3600));
+        let old = var("EH_JWT_SECRET").ok();
+        unsafe {
+            remove_var("EH_JWT_SECRET");
+        }
+        let result = generate_jwt_token(&claims);
+        assert!(result.is_err());
+        if let Some(val) = old {
+            unsafe {
+                set_var("EH_JWT_SECRET", val);
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_jwt_token_invalid() {
+        setup_env();
+        let result = parse_jwt_token("invalid.token.here");
+        assert!(result.is_err());
+    }
 }
