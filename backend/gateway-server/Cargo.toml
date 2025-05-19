@@ -8,6 +8,7 @@ anyhow = "1.0.98"
 async-graphql = "7.0.16"
 async-graphql-axum = "7.0.16"
 axum = "0.8.4"
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
 dotenvy = "0.15.7"
 prost = "0.13.5"
 tonic = { version = "0.13.1", features = ["channel", "tls-ring"] }
