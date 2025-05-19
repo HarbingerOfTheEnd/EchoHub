@@ -95,7 +95,7 @@ impl Mutation {
             .await?
             .ok_or(DbErr::RecordNotFound("User not found".to_string()))?;
 
-        let mut user = users::ActiveModel {
+        let user = users::ActiveModel {
             email_verified: Set(true),
             ..user.into()
         };
