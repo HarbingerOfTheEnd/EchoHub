@@ -124,7 +124,7 @@ pub fn generate_token_pair(user_id: &str) -> (String, String) {
     (access_token, refresh_token)
 }
 
-pub async fn send_email(to: &str, subject: &str, body: &str) -> Result<()> {
+pub async fn send_email(to: &str, subject: &str, body: String) -> Result<()> {
     let from = FROM.clone();
 
     let email = Message::builder()
@@ -132,7 +132,7 @@ pub async fn send_email(to: &str, subject: &str, body: &str) -> Result<()> {
         .to(to.parse()?)
         .subject(subject)
         .header(ContentType::TEXT_HTML)
-        .body(String::from(body))?;
+        .body(body)?;
 
     spawn_blocking(move || MAILER.send(&email).context("Failed to send email"))
         .await
@@ -230,7 +230,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_email_invalid_address() {
         setup_env();
-        let result = send_email("invalid", "Subject", "Body").await;
+        let result = send_email("invalid", "Subject", String::from("Body")).await;
         assert!(result.is_err());
     }
 
