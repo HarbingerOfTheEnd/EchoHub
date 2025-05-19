@@ -19,7 +19,7 @@ service AuthService {
   }
   rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {
     option (google.api.http) = {
-      get : "/v1/verify-email"
+      get : "/v1/verify-email?token={token}"
     };
   }
 }
