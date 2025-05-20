@@ -237,6 +237,9 @@ mod tests {
     #[test]
     fn test_generate_jwt_token_and_parse() {
         setup_env();
+        unsafe {
+            set_var("EH_JWT_SECRET", "supersecretkey");
+        }
         let mut claims = HashMap::new();
         claims.insert("user_id".to_string(), json!("user123"));
         claims.insert("exp".to_string(), json!(3600));

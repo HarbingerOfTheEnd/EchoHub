@@ -115,6 +115,8 @@ impl Mutation {
 
 #[cfg(test)]
 mod tests {
+    use std::env::set_var;
+
     use super::*;
     use sea_orm::{DbBackend, MockDatabase, MockExecResult, TransactionTrait};
 
@@ -143,8 +145,21 @@ mod tests {
         }
     }
 
+    fn setup_env() {
+        unsafe {
+            set_var("EH_WORKER_ID", "1");
+            set_var("EH_PROCESS_ID", "1");
+            set_var("EH_JWT_SECRET", "testsecret");
+            set_var("EH_EMAIL", "test@example.com");
+            set_var("EH_SMTP_SERVER", "smtp.example.com");
+            set_var("EH_SMTP_PORT", "587");
+            set_var("EH_EMAIL_PASSWORD", "password");
+        }
+    }
+
     #[tokio::test]
     async fn test_get_user_by_username_found() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
@@ -157,7 +172,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user_by_username_not_found() {
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        setup_env();
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results(vec![Vec::<users::Model>::new()])
+            .into_connection();
         let txn = db.begin().await.unwrap();
 
         let user = Query::get_user_by_username(&txn, "notfound").await.unwrap();
@@ -166,6 +184,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user_by_email_found() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
@@ -180,7 +199,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user_by_email_not_found() {
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        setup_env();
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results(vec![Vec::<users::Model>::new()])
+            .into_connection();
         let txn = db.begin().await.unwrap();
 
         let user = Query::get_user_by_email(&txn, "notfound@example.com")
@@ -191,6 +213,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_user() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 1,
@@ -209,6 +232,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_user() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 1,
@@ -225,6 +249,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_user() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 0,
@@ -239,6 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_oauth2_token_pair() {
+        setup_env();
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 1,
@@ -258,6 +284,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_email_success() {
+        setup_env();
         let mut user = mock_user_model();
         user.email_verified = false;
 
@@ -281,7 +308,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_email_not_found() {
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        setup_env();
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results(vec![Vec::<users::Model>::new()])
+            .into_connection();
         let txn = db.begin().await.unwrap();
 
         let result = Mutation::verify_email(&txn, "999").await;
