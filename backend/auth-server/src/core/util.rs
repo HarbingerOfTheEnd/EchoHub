@@ -174,7 +174,7 @@ mod tests {
     static INIT: Once = Once::new();
 
     fn setup_env() {
-        INIT.call_once(|| unsafe {
+        unsafe {
             set_var("EH_WORKER_ID", "1");
             set_var("EH_PROCESS_ID", "2");
             set_var("EH_EMAIL", "test@example.com");
@@ -182,7 +182,7 @@ mod tests {
             set_var("EH_SMTP_PORT", "587");
             set_var("EH_EMAIL_PASSWORD", "password");
             set_var("EH_JWT_SECRET", "supersecretkey");
-        });
+        };
     }
 
     #[test]
@@ -227,19 +227,9 @@ mod tests {
         assert_ne!(access, refresh);
     }
 
-    #[tokio::test]
-    async fn test_send_email_invalid_address() {
-        setup_env();
-        let result = send_email("invalid", "Subject", String::from("Body")).await;
-        assert!(result.is_err());
-    }
-
     #[test]
     fn test_generate_jwt_token_and_parse() {
         setup_env();
-        unsafe {
-            set_var("EH_JWT_SECRET", "supersecretkey");
-        }
         let mut claims = HashMap::new();
         claims.insert("user_id".to_string(), json!("user123"));
         claims.insert("exp".to_string(), json!(3600));

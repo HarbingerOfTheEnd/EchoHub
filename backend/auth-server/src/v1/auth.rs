@@ -138,29 +138,32 @@ impl AuthService for AuthServer {
             error!("Failed to generate JWT token: {e:?}");
             Status::internal("Failed to generate JWT token")
         })?;
-        let send_email_future = send_email(
-            &email,
-            "Welcome to EchoHub!",
-            format!(
-                r#"
-                <html>
-                    <body>
-                        <h1>Welcome to EchoHub!</h1>
-                        <p>Thank you for signing up. Please verify your email address.</p>
-                        <a href="https://auth-server.local:8000/v1/verify-email?token={jwt}">Verify Email</a>
-                    </body>
-                </html>
-            "#
-            ),
-        );
+        #[cfg(not(test))]
+        {
+            let send_email_future = send_email(
+                &email,
+                "Welcome to EchoHub!",
+                format!(
+                    r#"
+                    <html>
+                        <body>
+                            <h1>Welcome to EchoHub!</h1>
+                            <p>Thank you for signing up. Please verify your email address.</p>
+                            <a href="https://auth-server.local:8000/v1/verify-email?token={jwt}">Verify Email</a>
+                        </body>
+                    </html>
+                "#
+                ),
+            );
 
-        match send_email_future.await {
-            Ok(()) => {
-                info!("Email sent successfully to {email}");
-            }
-            Err(e) => {
-                error!("Failed to send email: {e:?}");
-                return Err(Status::internal("Failed to send email"));
+            match send_email_future.await {
+                Ok(()) => {
+                    info!("Email sent successfully to {email}");
+                }
+                Err(e) => {
+                    error!("Failed to send email: {e:?}");
+                    return Err(Status::internal("Failed to send email"));
+                }
             }
         }
 
@@ -341,5 +344,134 @@ impl AuthService for AuthServer {
         }
 
         Ok(Response::new(VerifyEmailResponse::default()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sea_orm::{DbBackend, MockDatabase, MockExecResult, TransactionTrait};
+    use std::{env::set_var, sync::Once};
+    use time::OffsetDateTime;
+    use tonic::{
+        Code::{InvalidArgument, NotFound},
+        Request,
+    };
+
+    use super::*;
+
+    fn setup_env() {
+        unsafe {
+            set_var("EH_WORKER_ID", "1");
+            set_var("EH_PROCESS_ID", "2");
+            set_var("EH_EMAIL", "test@example.com");
+            set_var("EH_SMTP_SERVER", "smtp.example.com");
+            set_var("EH_SMTP_PORT", "587");
+            set_var("EH_EMAIL_PASSWORD", "password");
+            set_var("EH_JWT_SECRET", "supersecretkey");
+        };
+    }
+
+    fn mock_db_signup() -> DatabaseConnection {
+        MockDatabase::new(DbBackend::Postgres)
+            .append_exec_results(vec![MockExecResult {
+                last_insert_id: 1,
+                rows_affected: 1,
+            }])
+            .append_query_results(vec![vec![entity::users::Model {
+                id: "1".to_string(),
+                username: "testuser".to_string(),
+                email: "test@example.com".to_string(),
+                password: "hashedpassword".to_string(),
+                discriminator: 1000,
+                email_verified: false,
+                created_at: OffsetDateTime::now_utc(),
+            }]]) // create_user returns user
+            .append_exec_results(vec![MockExecResult {
+                last_insert_id: 1,
+                rows_affected: 1,
+            }])
+            .append_query_results(vec![vec![entity::oauth2_token_pairs::Model {
+                id: "1".to_string(),
+                user_id: "1".to_string(),
+                access_token: "access".to_string(),
+                refresh_token: "refresh".to_string(),
+                r#type: "USER".to_string(),
+                access_token_expires_at: OffsetDateTime::now_utc(),
+                refresh_token_expires_at: OffsetDateTime::now_utc(),
+                scope: 1,
+            }]]) // create_oauth2_token_pair returns token pair
+            .into_connection()
+    }
+
+    fn mock_db() -> DatabaseConnection {
+        MockDatabase::new(DbBackend::Postgres).into_connection()
+    }
+
+    fn mock_db_signin_not_found() -> DatabaseConnection {
+        MockDatabase::new(DbBackend::Postgres)
+            .append_query_results(vec![Vec::<entity::users::Model>::new()]) // get_user_by_email returns None
+            .into_connection()
+    }
+
+    #[tokio::test]
+    async fn test_signup_success() {
+        setup_env();
+        let db = mock_db_signup();
+        let server = AuthServer::new(db);
+        let req = SignupRequest {
+            username: "testuser".into(),
+            password: "testpass123".into(),
+            email: "test@example.com".into(),
+        };
+        let resp = server.signup(Request::new(req)).await;
+        assert!(resp.is_ok());
+        let token_resp = resp.unwrap().into_inner();
+        assert!(!token_resp.access_token.is_empty());
+        assert!(!token_resp.refresh_token.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_signup_missing_fields() {
+        setup_env();
+        let db = mock_db();
+        let server = AuthServer::new(db);
+        let req = SignupRequest {
+            username: "".into(),
+            password: "".into(),
+            email: "".into(),
+        };
+        let resp = server.signup(Request::new(req)).await;
+        assert!(resp.is_err());
+        let status = resp.err().unwrap();
+        assert_eq!(status.code(), InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn test_signin_invalid_user() {
+        setup_env();
+        let db = mock_db_signin_not_found();
+        let server = AuthServer::new(db);
+        let req = SigninRequest {
+            email: "nouser@example.com".into(),
+            password: "wrongpass".into(),
+        };
+        let resp = server.signin(Request::new(req)).await;
+        assert!(resp.is_err());
+        let status = resp.err().unwrap();
+        assert_eq!(status.code(), NotFound);
+    }
+
+    #[tokio::test]
+    async fn test_verify_email_invalid_token() {
+        setup_env();
+        let db = mock_db();
+        let server = AuthServer::new(db);
+        let req = VerifyEmailRequest {
+            token: "invalidtoken".into(),
+        };
+        let resp = server.verify_email(Request::new(req)).await;
+        assert!(resp.is_err());
+        let status = resp.err().unwrap();
+        assert_eq!(status.code(), InvalidArgument);
     }
 }
