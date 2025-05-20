@@ -227,9 +227,7 @@ impl AuthService for AuthServer {
                 return Err(Status::internal("Failed to find user"));
             }
         };
-        let hashed_password = hash(password, DEFAULT_COST)
-            .map_err(|_| Status::internal("Failed to hash password"))?;
-        let verified = verify(&user.password, &hashed_password)
+        let verified = verify(&password, &user.password)
             .map_err(|_| Status::internal("Failed to verify password"))?;
 
         if !verified {
