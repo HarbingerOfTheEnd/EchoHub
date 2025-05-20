@@ -1,4 +1,6 @@
-use std::{env::var, net::SocketAddr, path::Path};
+#![allow(unused)]
+
+use std::{env::var, path::Path};
 
 use anyhow::{Context, Result};
 use auth_service_client::AuthServiceClient;
