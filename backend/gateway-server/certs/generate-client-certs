@@ -1,0 +1,30 @@
+#!/usr/bin/bash
+
+set -e
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CA_DIR="$PROJECT_ROOT/../../ca"
+OPENSSL_CNF="$PROJECT_ROOT/openssl-client.cnf"
+CLIENT_KEY="$PROJECT_ROOT/client.key"
+CLIENT_CSR="$PROJECT_ROOT/client.csr"
+CLIENT_CERT="$PROJECT_ROOT/client.crt"
+
+if [ ! -d "$CA_DIR" ]; then
+  echo "CA directory not found at $CA_DIR"
+  exit 1
+fi
+
+openssl genrsa -out "$CLIENT_KEY" 2048
+
+openssl req -new -key "$CLIENT_KEY" -out "$CLIENT_CSR" -config "$OPENSSL_CNF"
+
+openssl ca -batch \
+  -config "$OPENSSL_CNF" \
+  -extensions usr_cert \
+  -days 375 \
+  -notext \
+  -md sha256 \
+  -in "$CLIENT_CSR" \
+  -out "$CLIENT_CERT"
+
+openssl x509 -in "$CLIENT_CERT" -noout -text
