@@ -7,11 +7,11 @@ use tonic::{include_proto, transport::Channel};
 include_proto!("v1.auth");
 
 #[derive(Clone, Debug)]
-pub(crate) struct GrpcClients {
+pub(crate) struct GrpcClient {
     pub(crate) auth_client: AuthServiceClient<Channel>,
 }
 
-impl GrpcClients {
+impl GrpcClient {
     pub(crate) async fn new() -> Result<Self> {
         let auth_service_url = var("AUTH_SERVICE_URL").context("AUTH_SERVICE_URL not set")?;
         let auth_client = AuthServiceClient::connect(auth_service_url)
