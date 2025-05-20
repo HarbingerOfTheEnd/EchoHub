@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+package v1.auth;
+
+service AuthService {
+  rpc Signup(SignupRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post : "/v1/signup"
+      body : "*"
+    };
+  }
+  rpc Signin(SigninRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post : "/v1/signin"
+      body : "*"
+    };
+  }
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {
+    option (google.api.http) = {
+      get : "/v1/verify-email?token={token}"
+    };
+  }
+}
+
+message SignupRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message SigninRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message TokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3;
+  uint64 expires_in = 4;
+  repeated string scope = 5;
+}
+
+message VerifyEmailRequest { string token = 1; }
+
+message VerifyEmailResponse {}

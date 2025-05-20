@@ -1,0 +1,73 @@
+env.CARGO_TERM_COLOR = "always"
+
+default_job = "server"
+
+[jobs.check]
+command = ["cargo", "check"]
+need_stdout = false
+
+[jobs.check-all]
+command = ["cargo", "check", "--all-targets"]
+need_stdout = false
+
+[jobs.clippy]
+command = ["cargo", "clippy"]
+need_stdout = false
+
+[jobs.clippy-all]
+command = ["cargo", "clippy", "--all-targets"]
+need_stdout = false
+
+[jobs.test]
+command = ["cargo", "test"]
+need_stdout = true
+
+[jobs.nextest]
+command = [
+    "cargo",
+    "nextest",
+    "run",
+    "--hide-progress-bar",
+    "--failure-output",
+    "final",
+]
+need_stdout = true
+analyzer = "nextest"
+
+[jobs.doc]
+command = ["cargo", "doc", "--no-deps"]
+need_stdout = false
+
+[jobs.doc-open]
+command = ["cargo", "doc", "--no-deps", "--open"]
+need_stdout = false
+on_success = "back"
+
+[jobs.run]
+command = ["cargo", "run"]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-long]
+command = ["cargo", "run"]
+need_stdout = true
+allow_warnings = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+[jobs.ex]
+command = ["cargo", "run", "--example"]
+need_stdout = true
+allow_warnings = true
+
+[jobs.server]
+command = ["cargo", "run", "-p"]
+need_stdout = true
+allow_warnings = true
+on_change_strategy = "kill_then_restart"
+default_job = true
+
+[keybindings]
+r = "job:initial"
+c = "job:clippy-all"

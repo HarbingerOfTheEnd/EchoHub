@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+CA_DIR="$(realpath $(dirname "$0"))"
+OPENSSL_CNF="$CA_DIR/openssl.cnf"
+CERTS_DIR="$CA_DIR/certs"
+NEWCERTS_DIR="$CA_DIR/newcerts"
+PRIVATE_DIR="$CA_DIR/private"
+
+INDEX_FILE="$CA_DIR/index.txt"
+SERIAL_FILE="$CA_DIR/ca.srl"
+
+CA_KEY="$PRIVATE_DIR/ca.key"
+CA_CERT="$CERTS_DIR/ca.crt"
+
+mkdir -p "$CERTS_DIR" "$NEWCERTS_DIR" "$PRIVATE_DIR"
+chmod 700 "$PRIVATE_DIR"
+
+: > "$INDEX_FILE"
+echo 1000 > "$SERIAL_FILE"
+
+openssl genpkey \
+    -algorithm RSA \
+    -pkeyopt rsa_keygen_bits:4096 \
+    -aes256 \
+    -out "$CA_KEY"
+
+chmod 400 "$CA_KEY"
+
+openssl req \
+    -config "$OPENSSL_CNF" \
+    -key "$CA_KEY" \
+    -new -x509 \
+    -days 3650 \
+    -sha256 \
+    -extensions v3_ca \
+    -out "$CA_CERT"
+
+chmod 444 "$CA_CERT"
+
+echo "✅ Local CA generated!"
+echo "  • CA key:  $CA_KEY"
+echo "  • CA cert: $CA_CERT"
+echo "  • Serial:  $SERIAL_FILE"
+echo "  • Index:   $INDEX_FILE"
