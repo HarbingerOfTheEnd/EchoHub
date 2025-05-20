@@ -1,7 +1,7 @@
 use std::{env::var, net::SocketAddr, path::Path};
 
 use anyhow::{Context, Result};
-use async_graphql::{EmptyMutation, Schema, http::GraphiQLSource};
+use async_graphql::{EmptyMutation, EmptySubscription, Schema, http::GraphiQLSource};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{
     Extension, Router,
@@ -10,7 +10,6 @@ use axum::{
 };
 use axum_server::Server;
 use dotenvy::from_filename;
-use schema::Subscription;
 #[macro_use]
 extern crate tracing;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -20,7 +19,7 @@ use crate::{schema::Query, v1::client::GrpcClient};
 mod schema;
 mod v1;
 
-type GatewaySchema = Schema<Query, EmptyMutation, Subscription>;
+type GatewaySchema = Schema<Query, EmptyMutation, EmptySubscription>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,7 +41,7 @@ async fn main() -> Result<()> {
     let grpc_client = GrpcClient::new()
         .await
         .context("Failed to create gRPC client")?;
-    let schema = Schema::build(Query, EmptyMutation, Subscription)
+    let schema = Schema::build(Query::default(), EmptyMutation, EmptySubscription)
         .data(grpc_client)
         .finish();
 
