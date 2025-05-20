@@ -14,9 +14,8 @@ use schema::Subscription;
 #[macro_use]
 extern crate tracing;
 use tracing_subscriber::{EnvFilter, fmt};
-use v1::auth::GrpcClient;
 
-use crate::schema::Query;
+use crate::{schema::Query, v1::client::GrpcClient};
 
 mod schema;
 mod v1;
