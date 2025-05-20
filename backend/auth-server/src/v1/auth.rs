@@ -6,7 +6,7 @@ use sea_orm::{
     DatabaseConnection,
     DbErr::{Query as QueryErr, RecordNotFound},
     RuntimeErr::SqlxError,
-    error,
+    TransactionTrait, error,
     sqlx::Error::Database,
 };
 use serde_json::Value;
@@ -61,8 +61,12 @@ impl AuthService for AuthServer {
         let hashed_password = hash(password, DEFAULT_COST)
             .map_err(|_| Status::internal("Failed to hash password"))?;
 
-        let user = match Mutation::create_user(&self.db, &username, &email, &hashed_password).await
-        {
+        let txn = self.db.begin().await.map_err(|_| {
+            error!("Failed to begin transaction");
+            Status::internal("Failed to begin transaction")
+        })?;
+
+        let user = match Mutation::create_user(&txn, &username, &email, &hashed_password).await {
             Ok(user) => {
                 info!("User created successfully: {:?}", user.id);
                 user
@@ -92,7 +96,7 @@ impl AuthService for AuthServer {
         let (access_token, refresh_token) = generate_token_pair(&user.id);
 
         match Mutation::create_oauth2_token_pair(
-            &self.db,
+            &txn,
             &user.id,
             &access_token,
             &refresh_token,
@@ -160,6 +164,16 @@ impl AuthService for AuthServer {
             }
         }
 
+        match txn.commit().await {
+            Ok(_) => {
+                info!("Transaction committed successfully");
+            }
+            Err(e) => {
+                error!("Failed to commit transaction: {e:?}");
+                return Err(Status::internal("Failed to commit transaction"));
+            }
+        }
+
         let response = TokenResponse {
             access_token,
             refresh_token,
@@ -182,7 +196,12 @@ impl AuthService for AuthServer {
         }
 
         info!("Received signin request: email={email}");
-        let user = match Query::get_user_by_email(&self.db, &email).await {
+
+        let txn = self.db.begin().await.map_err(|_| {
+            error!("Failed to begin transaction");
+            Status::internal("Failed to begin transaction")
+        })?;
+        let user = match Query::get_user_by_email(&txn, &email).await {
             Ok(Some(user)) => {
                 info!("User found: {:?}", user.id);
                 user
@@ -220,7 +239,7 @@ impl AuthService for AuthServer {
 
         let (access_token, refresh_token) = generate_token_pair(&user.id);
         match Mutation::create_oauth2_token_pair(
-            &self.db,
+            &txn,
             &user.id,
             &access_token,
             &refresh_token,
@@ -254,6 +273,16 @@ impl AuthService for AuthServer {
             }
         }
 
+        match txn.commit().await {
+            Ok(_) => {
+                info!("Transaction committed successfully");
+            }
+            Err(e) => {
+                error!("Failed to commit transaction: {e:?}");
+                return Err(Status::internal("Failed to commit transaction"));
+            }
+        }
+
         let response = TokenResponse {
             access_token,
             refresh_token,
@@ -284,7 +313,12 @@ impl AuthService for AuthServer {
             .unwrap_or_default()
             .to_string();
 
-        match Mutation::verify_email(&self.db, &user_id).await {
+        let txn = self.db.begin().await.map_err(|_| {
+            error!("Failed to begin transaction");
+            Status::internal("Failed to begin transaction")
+        })?;
+
+        match Mutation::verify_email(&txn, &user_id).await {
             Ok(_) => {
                 info!("Email verified successfully");
             }
@@ -295,6 +329,16 @@ impl AuthService for AuthServer {
             Err(e) => {
                 error!("Failed to verify email: {e:?}");
                 return Err(Status::internal("Failed to verify email"));
+            }
+        }
+
+        match txn.commit().await {
+            Ok(_) => {
+                info!("Transaction committed successfully");
+            }
+            Err(e) => {
+                error!("Failed to commit transaction: {e:?}");
+                return Err(Status::internal("Failed to commit transaction"));
             }
         }
 

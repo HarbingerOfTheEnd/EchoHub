@@ -1,6 +1,6 @@
 use entity::{oauth2_token_pairs, users};
 use rand::random_range;
-use sea_orm::{ActiveValue::Set, DeleteResult, prelude::*};
+use sea_orm::{ActiveValue::Set, DatabaseTransaction, DeleteResult, prelude::*};
 use time::{Duration, OffsetDateTime};
 
 use crate::core::util::generate_snowflake;
@@ -15,29 +15,29 @@ pub(crate) struct Mutation;
 
 impl Query {
     pub async fn get_user_by_username(
-        db: &DbConn,
+        txn: &DatabaseTransaction,
         username: &str,
     ) -> Result<Option<users::Model>, DbErr> {
         users::Entity::find()
             .filter(users::Column::Username.eq(username))
-            .one(db)
+            .one(txn)
             .await
     }
 
     pub async fn get_user_by_email(
-        db: &DbConn,
+        txn: &DatabaseTransaction,
         email: &str,
     ) -> Result<Option<users::Model>, DbErr> {
         users::Entity::find()
             .filter(users::Column::Email.eq(email))
-            .one(db)
+            .one(txn)
             .await
     }
 }
 
 impl Mutation {
     pub async fn create_user(
-        db: &DbConn,
+        txn: &DatabaseTransaction,
         username: &str,
         email: &str,
         password: &str,
@@ -53,21 +53,27 @@ impl Mutation {
             ..Default::default()
         };
 
-        new_user.insert(db).await
+        new_user.insert(txn).await
     }
 
-    pub async fn update_user(db: &DbConn, user: users::Model) -> Result<users::Model, DbErr> {
+    pub async fn update_user(
+        txn: &DatabaseTransaction,
+        user: users::Model,
+    ) -> Result<users::Model, DbErr> {
         let user = users::ActiveModel::from(user);
 
-        user.update(db).await
+        user.update(txn).await
     }
 
-    pub async fn delete_user(db: &DbConn, user_id: &str) -> Result<DeleteResult, DbErr> {
-        users::Entity::delete_by_id(user_id).exec(db).await
+    pub async fn delete_user(
+        txn: &DatabaseTransaction,
+        user_id: &str,
+    ) -> Result<DeleteResult, DbErr> {
+        users::Entity::delete_by_id(user_id).exec(txn).await
     }
 
     pub async fn create_oauth2_token_pair(
-        db: &DbConn,
+        txn: &DatabaseTransaction,
         user_id: &str,
         access_token: &str,
         refresh_token: &str,
@@ -86,12 +92,15 @@ impl Mutation {
             scope: Set(scope),
         };
 
-        new_token_pair.insert(db).await
+        new_token_pair.insert(txn).await
     }
 
-    pub async fn verify_email(db: &DbConn, user_id: &str) -> Result<users::Model, DbErr> {
+    pub async fn verify_email(
+        txn: &DatabaseTransaction,
+        user_id: &str,
+    ) -> Result<users::Model, DbErr> {
         let user = users::Entity::find_by_id(user_id)
-            .one(db)
+            .one(txn)
             .await?
             .ok_or(DbErr::RecordNotFound("User not found".to_string()))?;
 
@@ -100,13 +109,14 @@ impl Mutation {
             ..user.into()
         };
 
-        user.update(db).await
+        user.update(txn).await
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{DbBackend, MockDatabase, MockExecResult};
+    use sea_orm::{DbBackend, MockDatabase, MockExecResult, TransactionTrait};
 
     fn mock_user_model() -> users::Model {
         users::Model {
@@ -138,8 +148,9 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let user = Query::get_user_by_username(&db, "testuser").await.unwrap();
+        let user = Query::get_user_by_username(&txn, "testuser").await.unwrap();
         assert!(user.is_some());
         assert_eq!(user.unwrap().username, "testuser");
     }
@@ -147,8 +158,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_user_by_username_not_found() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let user = Query::get_user_by_username(&db, "notfound").await.unwrap();
+        let user = Query::get_user_by_username(&txn, "notfound").await.unwrap();
         assert!(user.is_none());
     }
 
@@ -157,8 +169,9 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let user = Query::get_user_by_email(&db, "test@example.com")
+        let user = Query::get_user_by_email(&txn, "test@example.com")
             .await
             .unwrap();
         assert!(user.is_some());
@@ -168,8 +181,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_user_by_email_not_found() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let user = Query::get_user_by_email(&db, "notfound@example.com")
+        let user = Query::get_user_by_email(&txn, "notfound@example.com")
             .await
             .unwrap();
         assert!(user.is_none());
@@ -184,8 +198,9 @@ mod tests {
             }])
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let user = Mutation::create_user(&db, "testuser", "test@example.com", "password")
+        let user = Mutation::create_user(&txn, "testuser", "test@example.com", "password")
             .await
             .unwrap();
         assert_eq!(user.username, "testuser");
@@ -201,9 +216,10 @@ mod tests {
             }])
             .append_query_results(vec![vec![mock_user_model()]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
         let user = mock_user_model();
-        let updated = Mutation::update_user(&db, user).await.unwrap();
+        let updated = Mutation::update_user(&txn, user).await.unwrap();
         assert_eq!(updated.username, "testuser");
     }
 
@@ -215,8 +231,9 @@ mod tests {
                 rows_affected: 1,
             }])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let result = Mutation::delete_user(&db, "1").await.unwrap();
+        let result = Mutation::delete_user(&txn, "1").await.unwrap();
         assert_eq!(result.rows_affected, 1);
     }
 
@@ -229,9 +246,10 @@ mod tests {
             }])
             .append_query_results(vec![vec![mock_token_pair_model()]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
         let token_pair =
-            Mutation::create_oauth2_token_pair(&db, "1", "access", "refresh", "Bearer", 1)
+            Mutation::create_oauth2_token_pair(&txn, "1", "access", "refresh", "Bearer", 1)
                 .await
                 .unwrap();
         assert_eq!(token_pair.user_id, "1");
@@ -255,16 +273,18 @@ mod tests {
                 verified_user
             }]])
             .into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let verified = Mutation::verify_email(&db, "1").await.unwrap();
+        let verified = Mutation::verify_email(&txn, "1").await.unwrap();
         assert!(verified.email_verified);
     }
 
     #[tokio::test]
     async fn test_verify_email_not_found() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let txn = db.begin().await.unwrap();
 
-        let result = Mutation::verify_email(&db, "999").await;
+        let result = Mutation::verify_email(&txn, "999").await;
         assert!(matches!(result, Err(DbErr::RecordNotFound(_))));
     }
 }
