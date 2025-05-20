@@ -18,6 +18,6 @@ impl GrpcClients {
             .await
             .context("Failed to connect to auth service")?;
 
-        Self { auth_client }
+        Ok(Self { auth_client })
     }
 }
