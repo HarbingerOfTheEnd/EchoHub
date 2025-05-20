@@ -80,7 +80,7 @@ static MAILER: Lazy<SmtpTransport> = Lazy::new(|| {
     let from = FROM.clone();
     let password = var("EH_EMAIL_PASSWORD").expect("EH_EMAIL_PASSWORD not set");
 
-    SmtpTransport::relay(&smtp_server)
+    SmtpTransport::starttls_relay(&smtp_server)
         .expect("Failed to create SMTP transport")
         .port(smtp_port)
         .credentials(Credentials::new(from, password))
