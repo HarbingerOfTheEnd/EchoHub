@@ -45,10 +45,8 @@ impl GrpcClient {
 
         let tls = ClientTlsConfig::new().ca_certificate(ca).identity(identity);
 
-        let auth_server_address = var("AUTH_SERVER_ADDRESS")
-            .context("AUTH_SERVER_ADDRESS not set")?
-            .parse::<SocketAddr>()
-            .context("Failed to parse AUTH_SERVER_ADDRESS")?;
+        let auth_server_address =
+            var("AUTH_SERVER_ADDRESS").context("AUTH_SERVER_ADDRESS not set")?;
 
         let channel = Channel::from_shared(format!("https://{}", auth_server_address))
             .context("Failed to create channel")?
