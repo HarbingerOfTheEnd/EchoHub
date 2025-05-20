@@ -168,6 +168,7 @@ mod tests {
     };
 
     use serde_json::json;
+    use serial_test::serial;
 
     use super::*;
 
@@ -204,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_generate_snowflake_unique() {
         setup_env();
         let now = EPOCH + 100_000;
@@ -228,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_generate_jwt_token_and_parse() {
         setup_env();
         let mut claims = HashMap::new();
@@ -239,6 +242,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_generate_jwt_token_missing_secret() {
         let mut claims = HashMap::new();
         claims.insert("user_id".to_string(), json!("user123"));
@@ -257,6 +261,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_jwt_token_invalid() {
         setup_env();
         let result = parse_jwt_token("invalid.token.here");

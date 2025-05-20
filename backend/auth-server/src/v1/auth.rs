@@ -350,6 +350,7 @@ impl AuthService for AuthServer {
 #[cfg(test)]
 mod tests {
     use sea_orm::{DbBackend, MockDatabase, MockExecResult, TransactionTrait};
+    use serial_test::serial;
     use std::{env::set_var, sync::Once};
     use time::OffsetDateTime;
     use tonic::{
@@ -385,7 +386,7 @@ mod tests {
                 discriminator: 1000,
                 email_verified: false,
                 created_at: OffsetDateTime::now_utc(),
-            }]]) // create_user returns user
+            }]])
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 1,
                 rows_affected: 1,
@@ -399,7 +400,7 @@ mod tests {
                 access_token_expires_at: OffsetDateTime::now_utc(),
                 refresh_token_expires_at: OffsetDateTime::now_utc(),
                 scope: 1,
-            }]]) // create_oauth2_token_pair returns token pair
+            }]])
             .into_connection()
     }
 
@@ -409,11 +410,12 @@ mod tests {
 
     fn mock_db_signin_not_found() -> DatabaseConnection {
         MockDatabase::new(DbBackend::Postgres)
-            .append_query_results(vec![Vec::<entity::users::Model>::new()]) // get_user_by_email returns None
+            .append_query_results(vec![Vec::<entity::users::Model>::new()])
             .into_connection()
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_signup_success() {
         setup_env();
         let db = mock_db_signup();
@@ -431,6 +433,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_signup_missing_fields() {
         setup_env();
         let db = mock_db();
@@ -447,6 +450,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_signin_invalid_user() {
         setup_env();
         let db = mock_db_signin_not_found();
@@ -462,6 +466,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_verify_email_invalid_token() {
         setup_env();
         let db = mock_db();
