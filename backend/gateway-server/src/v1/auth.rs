@@ -6,6 +6,7 @@ use tonic::{include_proto, transport::Channel};
 
 include_proto!("v1.auth");
 
+#[derive(Clone, Debug)]
 pub(crate) struct GrpcClients {
     pub(crate) auth_client: AuthServiceClient<Channel>,
 }
