@@ -1383,8 +1383,11 @@ dependencies = [
  "dotenvy",
  "prost",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3932,6 +3935,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

@@ -13,6 +13,9 @@ dotenvy = "0.15.7"
 prost = "0.13.5"
 tonic = { version = "0.13.1", features = ["channel", "tls-ring"] }
 tokio = { version = "1.45.0", features = ["full"] }
+tokio-stream = { version = "0.1.17", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
 
 [build-dependencies]
 tonic-build = "0.13.1"
