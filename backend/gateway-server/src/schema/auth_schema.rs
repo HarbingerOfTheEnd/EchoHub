@@ -1,4 +1,4 @@
-use async_graphql::{Context, FieldError, InputObject, Object, Result, SimpleObject};
+use async_graphql::{Context, FieldError, Object, Result};
 
 use crate::{
     GrpcClient,
@@ -8,77 +8,9 @@ use crate::{
 #[derive(Default)]
 pub(crate) struct AuthMutation;
 
-#[derive(InputObject)]
-struct GQLSignupRequest {
-    pub username: String,
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(InputObject)]
-struct GQLSigninRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(InputObject)]
-struct GQLVerifyEmailRequest {
-    pub token: String,
-}
-
-#[derive(SimpleObject)]
-struct GQLTokenResponse {
-    pub access_token: String,
-    pub refresh_token: String,
-    pub token_type: String,
-    pub expires_in: u64,
-    pub scope: Vec<String>,
-}
-
-impl Into<SignupRequest> for GQLSignupRequest {
-    fn into(self) -> SignupRequest {
-        SignupRequest {
-            username: self.username,
-            email: self.email,
-            password: self.password,
-        }
-    }
-}
-
-impl Into<SigninRequest> for GQLSigninRequest {
-    fn into(self) -> SigninRequest {
-        SigninRequest {
-            email: self.email,
-            password: self.password,
-        }
-    }
-}
-
-impl Into<VerifyEmailRequest> for GQLVerifyEmailRequest {
-    fn into(self) -> VerifyEmailRequest {
-        VerifyEmailRequest { token: self.token }
-    }
-}
-
-impl Into<GQLTokenResponse> for TokenResponse {
-    fn into(self) -> GQLTokenResponse {
-        GQLTokenResponse {
-            access_token: self.access_token,
-            refresh_token: self.refresh_token,
-            token_type: self.token_type,
-            expires_in: self.expires_in,
-            scope: self.scope,
-        }
-    }
-}
-
 #[Object]
 impl AuthMutation {
-    async fn signup(
-        &self,
-        ctx: &Context<'_>,
-        request: GQLSignupRequest,
-    ) -> Result<GQLTokenResponse> {
+    async fn signup(&self, ctx: &Context<'_>, request: SignupRequest) -> Result<TokenResponse> {
         info!("Recieved sign up request");
         let mut auth_service_client = ctx.data_unchecked::<GrpcClient>().auth_client.clone();
         let request = SignupRequest { ..request.into() };
@@ -98,11 +30,7 @@ impl AuthMutation {
         }
     }
 
-    async fn signin(
-        &self,
-        ctx: &Context<'_>,
-        request: GQLSigninRequest,
-    ) -> Result<GQLTokenResponse> {
+    async fn signin(&self, ctx: &Context<'_>, request: SigninRequest) -> Result<TokenResponse> {
         info!("Recieved sign in request");
         let mut auth_service_client = ctx.data_unchecked::<GrpcClient>().auth_client.clone();
         let request = SigninRequest { ..request.into() };
@@ -122,11 +50,7 @@ impl AuthMutation {
         }
     }
 
-    async fn verify_email(
-        &self,
-        ctx: &Context<'_>,
-        request: GQLVerifyEmailRequest,
-    ) -> Result<bool> {
+    async fn verify_email(&self, ctx: &Context<'_>, request: VerifyEmailRequest) -> Result<bool> {
         info!("Recieved verify email request");
         let mut auth_service_client = ctx.data_unchecked::<GrpcClient>().auth_client.clone();
         let request = VerifyEmailRequest { ..request.into() };
