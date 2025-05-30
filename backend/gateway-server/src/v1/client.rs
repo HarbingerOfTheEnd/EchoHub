@@ -22,9 +22,10 @@ impl GrpcClient {
         let ca_cert_path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
+            .parent()
+            .unwrap()
             .join("ca")
-            .join("certs")
-            .join("ca.crt");
+            .join("rootCA.pem");
         let client_cert_path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("certs")
             .join("client.crt");
@@ -45,7 +46,16 @@ impl GrpcClient {
         let ca = Certificate::from_pem(ca_cert);
         let identity = Identity::from_pem(client_cert, client_key);
 
-        let tls = ClientTlsConfig::new().ca_certificate(ca).identity(identity);
+        #[cfg(debug_assertions)]
+        let tls = ClientTlsConfig::new()
+            .ca_certificate(ca)
+            .domain_name("localhost")
+            .identity(identity);
+        #[cfg(not(debug_assertions))]
+        let tls = ClientTlsConfig::new()
+            .ca_certificate(ca)
+            .identity(identity)
+            .domain_name("auth-server");
 
         let auth_server_address =
             var("AUTH_SERVER_ADDRESS").context("AUTH_SERVER_ADDRESS not set")?;

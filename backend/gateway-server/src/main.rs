@@ -8,7 +8,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing::{get, get_service},
 };
-use axum_server::Server;
+use axum_server::{bind_rustls, tls_rustls::RustlsConfig};
 use dotenvy::from_filename;
 #[macro_use]
 extern crate tracing;
@@ -24,7 +24,7 @@ type GatewaySchema = Schema<Query, EmptyMutation, EmptySubscription>;
 #[tokio::main]
 async fn main() -> Result<()> {
     let env_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".env");
-    from_filename(env_path).context("Failed to load .env file")?;
+    from_filename(env_path).ok();
 
     fmt()
         .with_target(true)
@@ -37,6 +37,17 @@ async fn main() -> Result<()> {
         .context("ADDRESS not set")?
         .parse::<SocketAddr>()
         .context("Failed to parse ADDRESS")?;
+
+    let server_cert = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("certs")
+        .join("gateway-server.crt");
+    let server_key = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("certs")
+        .join("gateway-server.key");
+
+    let tls_config = RustlsConfig::from_pem_file(server_cert, server_key)
+        .await
+        .context("Failed to load TLS certificates")?;
 
     let grpc_client = GrpcClient::new()
         .await
@@ -53,7 +64,7 @@ async fn main() -> Result<()> {
         )
         .layer(Extension(schema));
 
-    Server::bind(address)
+    bind_rustls(address, tls_config)
         .serve(router.into_make_service())
         .await
         .context("Failed to start server")
