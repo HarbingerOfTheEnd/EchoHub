@@ -20,13 +20,13 @@ describe('/+page.svelte', () => {
 
     test('renders the login/signup links', () => {
         render(Page);
-        const loginLink = screen.getByRole('link', {
-            name: 'Login',
+        const siginLink = screen.getByRole('link', {
+            name: 'Sign in',
         });
         const signupLink = screen.getByRole('link', {
-            name: 'Sign Up',
+            name: 'Sign up',
         });
-        expect(loginLink).toBeInTheDocument();
+        expect(siginLink).toBeInTheDocument();
         expect(signupLink).toBeInTheDocument();
     });
 });
