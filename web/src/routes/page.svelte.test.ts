@@ -12,7 +12,9 @@ describe('/+page.svelte', () => {
 
     test('renders the main heading', () => {
         render(Page);
-        const heading = screen.getByRole('heading', { name: 'EchoHub' });
+        const heading = screen.getByRole('heading', {
+            name: 'Welcome to EchoHub',
+        });
         expect(heading).toBeInTheDocument();
     });
 });
