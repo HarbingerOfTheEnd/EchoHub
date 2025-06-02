@@ -16,7 +16,7 @@
         "check": "bun --filter=web check",
         "check:watch": "bun --filter=web check:watch",
         "test:unit": "bun --filter=web test:unit",
-        "test": "bun --filter=web test",
+        "test": "bun --filter=web run test",
         "test:e2e": "bun --filter=web test:e2e",
         "storybook": "bun --filter=web storybook",
         "build-storybook": "bun --filter=web build-storybook"
