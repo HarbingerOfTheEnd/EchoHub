@@ -7,5 +7,18 @@
     "devDependencies": {
         "@biomejs/biome": "^1.9.4"
     },
-    "workspaces": ["web"]
+    "workspaces": ["web"],
+    "scripts": {
+        "dev": "bun --filter=web dev",
+        "build": "bun --filter=web build",
+        "preview": "bun --filter=web preview",
+        "prepare": "bun --filter=web prepare",
+        "check": "bun --filter=web check",
+        "check:watch": "bun --filter=web check:watch",
+        "test:unit": "bun --filter=web test:unit",
+        "test": "bun --filter=web test",
+        "test:e2e": "bun --filter=web test:e2e",
+        "storybook": "bun --filter=web storybook",
+        "build-storybook": "bun --filter=web build-storybook"
+    }
 }
