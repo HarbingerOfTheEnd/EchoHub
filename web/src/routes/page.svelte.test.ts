@@ -17,4 +17,16 @@ describe('/+page.svelte', () => {
         });
         expect(heading).toBeInTheDocument();
     });
+
+    test('renders the login/signup links', () => {
+        render(Page);
+        const loginLink = screen.getByRole('link', {
+            name: 'Login',
+        });
+        const signupLink = screen.getByRole('link', {
+            name: 'Sign Up',
+        });
+        expect(loginLink).toBeInTheDocument();
+        expect(signupLink).toBeInTheDocument();
+    });
 });
