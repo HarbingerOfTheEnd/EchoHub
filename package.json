@@ -6,5 +6,6 @@
     "license": "Apache-2.0",
     "devDependencies": {
         "@biomejs/biome": "^1.9.4"
-    }
+    },
+    "workspaces": ["web"]
 }
