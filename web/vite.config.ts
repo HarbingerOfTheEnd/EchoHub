@@ -29,4 +29,10 @@ export default defineConfig({
             },
         ],
     },
+    resolve: {
+        alias: {
+            $styles: './src/lib/styles',
+            $components: './src/lib/components',
+        },
+    },
 });
