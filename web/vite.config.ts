@@ -1,6 +1,7 @@
 import { svelteTesting } from '@testing-library/svelte/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import { resolve } from 'node:path';
 
 export default defineConfig({
     plugins: [sveltekit()],
@@ -31,8 +32,15 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            $styles: './src/lib/styles',
-            $components: './src/lib/components',
+            $styles: resolve(__dirname, 'src/styles'),
+            $components: resolve(__dirname, 'src/lib/components'),
+        },
+    },
+    css: {
+        preprocessorOptions: {
+            scss: {
+                additionalData: `@use '$styles/variables' as *;`,
+            },
         },
     },
 });

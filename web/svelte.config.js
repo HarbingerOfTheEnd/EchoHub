@@ -3,14 +3,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { sveltePreprocess } from 'svelte-preprocess';
 
 const config = {
-    preprocess: [
-        vitePreprocess(),
-        sveltePreprocess({
-            scss: {
-                prependData: `@import '$styles/variables.scss';`,
-            },
-        }),
-    ],
+    preprocess: [vitePreprocess()],
     kit: { adapter: adapter() },
 };
 
