@@ -4,8 +4,9 @@ import { render, screen } from '@testing-library/svelte';
 import Page from './+page.svelte';
 
 describe('/+page.svelte', () => {
-    test('should render h1', () => {
+    test('renders the page with the correct title', () => {
         render(Page);
-        expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+        const { title } = document;
+        expect(title).toBe('EchoHub');
     });
 });
