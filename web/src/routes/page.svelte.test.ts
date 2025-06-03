@@ -31,4 +31,16 @@ describe('/+page.svelte', () => {
         expect(siginLink).toBeInTheDocument();
         expect(signupLink).toBeInTheDocument();
     });
+
+    test('signin and signup links have correct hrefs', () => {
+        const signupLink = screen.getByRole<HTMLAnchorElement>('link', {
+            name: 'Sign up',
+        });
+        const signinLink = screen.getByRole<HTMLAnchorElement>('link', {
+            name: 'Sign in',
+        });
+
+        expect(signupLink).toHaveAttribute('href', '/signup');
+        expect(signinLink).toHaveAttribute('href', '/signin');
+    });
 });
