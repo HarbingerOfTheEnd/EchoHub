@@ -1,17 +1,19 @@
-import { describe, test, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, test } from 'vitest';
 import Page from './+page.svelte';
 
 describe('/+page.svelte', () => {
-    test('renders the page with the correct title', () => {
+    beforeEach(() => {
         render(Page);
+    });
+
+    test('renders the page with the correct title', () => {
         const { title } = document;
         expect(title).toBe('EchoHub');
     });
 
     test('renders the main heading', () => {
-        render(Page);
         const heading = screen.getByRole('heading', {
             name: 'Welcome to EchoHub',
         });
@@ -19,7 +21,6 @@ describe('/+page.svelte', () => {
     });
 
     test('renders the login/signup links', () => {
-        render(Page);
         const siginLink = screen.getByRole('link', {
             name: 'Sign in',
         });
