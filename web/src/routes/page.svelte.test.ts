@@ -9,8 +9,9 @@ describe('/+page.svelte', () => {
     });
 
     test('renders the page with the correct title', () => {
-        const { title } = document;
-        expect(title).toBe('EchoHub');
+        const title = document.querySelector('title');
+        expect(title).toBeTruthy();
+        expect(title).toHaveTextContent('EchoHub');
     });
 
     test('renders the main heading', () => {
