@@ -43,4 +43,13 @@ export default defineConfig({
             },
         },
     },
+    server: {
+        port: 3000,
+        strictPort: true,
+        https: {
+            ca: resolve(__dirname, '../ca/rootCA.pem'),
+            cert: resolve(__dirname, 'certs/web-server.crt'),
+            key: resolve(__dirname, 'certs/web-server.key'),
+        }
+    }
 });
